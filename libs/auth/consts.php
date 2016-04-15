@@ -1,8 +1,6 @@
 <?php
 
 define('TOPSICRET','T0p3icret');
-//define('TOPSICRET', 'Vh1MTV100');
-
 
 /**      Путь к папке auth  
  *      LOACTION - глобальная костанта в софиг
