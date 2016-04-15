@@ -434,7 +434,7 @@ function Auth(admin_element,options){
             form.style.cssText="position:fixed;background:#fff; padding:10px;border:1px solid #ccc;";
 //            form.style.background='#fff';
             form.innerHTML="<div>"+text+"</div>"
-            +"<div><input type='submit' value='Применить'><input type='reset' value='Закрыть'></div>";
+            +"<div style='text-align:right;'><input type='submit' value='Применить'><input type='reset' value='Закрыть'></div>";
             document.body.appendChild(form);
             form_center(form);
             form.onreset = function(){

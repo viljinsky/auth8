@@ -429,21 +429,22 @@ function userlist(){
 
     $start = ($page-1)*$count;
 
-    $result = mysql_query("select user_id,concat(last_name,' ',first_name),login,email,email_confirmed,\n"
-            ."date_format(reg_date,'%d %m %Y'),"
-            ."date_format((select max(visit_time) from visits where user_id=users.user_id),'%d %m %Y'),\n"
-            ."(select count(*) from visits where user_id=users.user_id)\n"
-            ."from users limit $start,$count")
-                    or die(mysql_error());
+//    $result = mysql_query("select user_id,concat(last_name,' ',first_name),login,email,email_confirmed,\n"
+//            ."date_format(reg_date,'%d %m %Y'),"
+//            ."date_format((select max(visit_time) from visits where user_id=users.user_id),'%d %m %Y'),\n"
+//            ."(select count(*) from visits where user_id=users.user_id)\n"
+//            ."from users limit $start,$count")
+//                    or die(mysql_error());
+    $result = mysql_query("select * from v_users limit $start,$count") or die(mysql_error());
     $html = '';
 
     $html .= '<table>';
     $recno = 0;
     while ($data = mysql_fetch_array($result)){
-        list($user_id,$user_name,$login,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
+        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
         $recno++;
         $html .='<tr data-id="'.$user_id.'">';
-        $html .="<td><input type='checkbox'></td><td>$user_id</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
+        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
             . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
              ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
         $html .='</tr>';

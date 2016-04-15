@@ -4,8 +4,8 @@
 
 define('HOST', 'localhost');
 define('DATABASE','auth8');
-define('USER','test');
-define('PASSWORD','test');
+define('USER','auth8');
+define('PASSWORD','auth8');
 
 // $libs_path = dirname(__FILE__).DIRECTORY_SEPARATOR.'libs'.DIRECTORY_SEPARATOR;
 
