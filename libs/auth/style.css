@@ -1,0 +1,19 @@
+.dialog-form{
+    position: fixed;
+    left:0;
+    top:0;
+    background: #fff;
+    border: 1px solid #ccc; 
+}
+.dialog-form .comments {font-size: x-small;}
+
+.dialog-form input:read-only {color: #ccc;}
+
+.dialog-form-title {text-align:center;background:#69c; font-size: 1.2em; color: #fff;padding: 5px;}
+.dialog-form-footer {text-align:right;padding:10px;}
+.dialog-form-content { padding:10px;}
+
+.admin {list-style: none; color:black;}
+.admin li{display: inline-block;}
+.admin a{text-decoration: none;color: black;}
+.admin a:hover{text-decoration: underline;}

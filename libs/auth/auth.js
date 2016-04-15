@@ -1,0 +1,636 @@
+function form_center(form){
+
+    var w = document.documentElement.clientWidth,
+        h= document.documentElement.clientHeight,
+        w1 = form.clientWidth,
+        h1 = form.clientHeight;
+
+    form.style.left= Math.floor((w-w1)/2)+'px';
+    form.style.top=Math.floor((h-h1)/2)+'px';
+}
+
+function Request(callback){
+    var request = new XMLHttpRequest();
+    request.onreadystatechange=function(){
+        if (request.readyState===4){
+            switch (request.status){
+                case 200:
+                    callback(request.responseText);
+                    return;
+                case 404:
+                    alert('Страница  не найдена ');
+                    return;
+                default:
+                    alert('Ошибка : '+request.statusText);
+            }
+        }
+    };
+    return request;
+}
+
+
+function Form(option){
+    var form = document.createElement('form');
+    form.className='dialog-form';
+    form.innerHTML='<div  class="dialog-form-title">'+option.title+'</div>'
+                   +'<div class="dialog-form-content">' 
+                   +option.content
+                   +'</div>'
+                   +'<div class="dialog-form-footer">'
+                   +'<div style="float:right;"><input type="submit" value="'+option.button+'">'
+                   +'<button class="close-dialog">Закрыть</button></div></div>';
+    document.body.appendChild(form);
+    form_center(form);
+//    form.style.left= Math.floor( document.documentElement.clientWidth/2 - form.clientWidth/2 )+'px';
+//    form.style.top = Math.floor(document.documentElement.clientHeight/2 - form.clientHeight/2)+'px';
+    form.querySelector('.close-dialog').onclick=function(){
+        form.close();
+        return false;
+    };
+    
+    if (option.focus!==undefined){
+        form[option.focus].focus();
+    };
+    
+    form.close = function(){
+        document.body.removeChild(this);
+    };
+    return form;
+}
+
+/**
+ *  Объект аутодентификации
+ *  @admin_element дом-елемент - меню аудентификации
+ *  @options :
+ *      admin_path - пукть к библиотеке
+ *      user_id    - текущий пользователь
+ **/
+function Auth(admin_element,options){
+
+    var form = null;
+    var self = this;
+    
+    /**путь к папке auth*/
+    var admin_path=options['admin_path'];
+    
+    this.user_id = options.user_id;
+    
+    this.read_userinfo = function(user_id,callback){
+      var request = Request(function(text){
+           callback(JSON.parse(text));
+      });
+      request.open('POST',admin_path+'/auth_proc.php');
+      request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+      request.send('command=userinfo&user_id='+user_id);
+    };
+
+//    function confirm_email(user_id,email,callback){
+//        var request = Request(function(text){
+//            callback('Вам отправлено сообщение :'+text);
+//            }
+//        );
+//        
+//        request.open('POST',admin_path+'/change_email.php');
+//        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+//        request.send('user_id='+user_id+'&email='+email);
+//    }
+    
+    /** форма изменения ел.адреса*/
+    this.email=function(){
+        self.read_userinfo(self.user_id,function(user){
+            if (user.error===0){
+                form = new Form({
+                    content: "<input name='user_id' hidden ><br>Укажите адрес электронной почты <input  name='email'>",
+                    title  : "Изменение адреса",
+                    button : "Выслать письмо"
+                });
+                form.user_id.value=user.user_id;
+                form.email.value = user.email;
+                form.onsubmit=function(){
+                    confirm_email(form.user_id.value,form.email.value,function(message){
+                        form.close();
+                        alert(message);
+                    });
+                   return false;  
+                };
+            } else {
+                alert (user.message);
+            }
+        });
+    };
+    
+    this.forget=function(){
+        form = Form({
+            content:'<input name="command" value="forget" hidden>'+"Введите логин или email <input name='login_or_email' required><br>",
+            title:  "Восстановление входа",
+            button: "Восстановить",
+            focus:  "login_or_email"
+        });
+        form.onsubmit=function(){
+            var request = Request(function(text){
+                console.log(text);
+                var values = JSON.parse(text);
+                if (values.error===0){
+                    form.close();
+                }
+                alert(values.message);
+            });
+            request.open('POST',admin_path+'/auth_proc.php');
+            request.send(new FormData(this));
+            return false;
+        };
+        return false;
+    };
+    
+    /**
+     * Функция кажется не используется !!!!
+     * @param {type} login
+     * @param {type} pwd
+     * @param {type} callback
+     * @returns {undefined}
+     */
+    this.remember=function(login,pwd,callback){
+        var request = Request(function(text){
+            console.log(text);
+            var values = JSON.parse(text);
+            if (values.error===0){
+                location.reload();
+            }
+            if (values.error === 33){
+                alert('Ошибка\n Mysql : "'+values.message+'"\nquery : "'+values.sql+"'");
+            }
+            if (callback!==null){
+                callback(values);
+            }
+        });
+        request.open('POST',admin_path+'/remember.php');
+        request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        request.send('login='+ login+'&pwd='+pwd);
+    };
+    
+    /**
+     * Вход в пользователя
+     * @returns {Boolean}
+     */
+    this.login=function(){
+        form = Form({
+            content :
+                    '<input name="command" value="login" hidden>'+
+                    '<table>'+    
+                    '<tr><td>Логин или email</td><td><input name="login" placeholder="логин" requered></td></tr>'+
+                    '<tr><td>Пароль</td><td><input name="password" type="password" placeholder="пароль" requered></td></tr>'+
+                    '<tr><td>&nbsp;</td><td><input type="checkbox" name = "remember_me" checked>Запомнить</td></tr>'+
+                    '<tr><td colspan="2"><a href="#" data-action = "forget" >Забыли пароль (логин)?</a></td></tr>'+
+//                    '<tr><td colspan="2"><a href="#" data-action = "dontmail">Не пришло письмо подтверждения?</a></td></tr>'+
+                    '</table>',
+           title    :"Вход пользователя",
+           button   :"Войти",
+           focus    :"login"
+        });
+        
+        form.onclick=function(event){
+            if (event.target.tagName==='A'){
+                var action = event.target.getAttribute('data-action');
+
+                switch (action){
+                    case 'forget':
+                      form.close();
+                      self.forget();
+                      return false;
+                    case 'dontmail':
+                      form.close();
+                      self.email();
+                      return false;
+                }
+            }
+        };
+        form.action
+        form.onsubmit = function(){
+            var request = Request(function(text){
+                console.log('login responce = "'+text+'"');
+                    var values = JSON.parse(text);
+                    switch (values.error){
+                        case 0:
+                            self.user_id=values.user_id;
+                            form.close();
+                            location.reload();
+                            return;
+                        case 37:
+                            self.user_id=values.user_id;
+                            if (confirm(text)){
+                                form.close();
+                                self.email();
+                                return;
+                            }
+                            break;
+                        default :   
+                            alert(' '+values.error+' '+values.message);
+                    }
+                
+            });
+            request.open('POST',admin_path+'/auth_proc.php')// login.php');
+            request.send(new FormData(this));
+            return false;
+        };
+        return false;        
+    };
+    
+    /** Выход пользователя*/
+    this.logout=function(){
+        var request = Request(function(text){
+//                alert(text);
+                document.location.reload();            
+        });
+        request.open('POST',admin_path+'/auth_proc.php');
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=logout');
+        return false;
+    };
+    
+    
+    /** Информация о пользователе */
+    this.userinfo=function(){
+        
+        self.read_userinfo(self.user_id,function(query){
+            form = Form({
+                content :
+                       '<input name="command" value="update" hidden><input name="user_id" hidden>' 
+                       + '<table>'
+                       + '<tr><td>Логин</td><td><input name="login" readonly></td></tr>'
+                       +'<tr><td>email</td><td><input name="email" readonly></td></tr>'
+                       +'<tr><td>Фамилия</td><td><input name="last_name"></td></tr>'
+                       +'<tr><td>Имя</td><td><input name="first_name"></td></tr>'
+//                       +'<tr><td>Статус</td><td><select name="status"></select></td></tr>'
+//                       +'<tr><td>Город</td><td><input name="town"></td></tr>'
+//                       +'<tr><td>Страна</td><td><input name="country"></td></tr>'           
+//                       +'<tr><td>Учебное заведение</td><td><input name="educational"></td></tr>'
+                       +'<tr><td>Присылать мне новости</td><td><input type="checkbox" name="allow_to_notify"></td></tr>'
+//                       +'<tr><td colspan="2" style="text-align:right"><a class="change" href="#">Изменить пароль</a></td></tr>'
+                       +'</table>',
+                title   : "Информация о пользователе",
+                button  : "Применить"
+            });
+
+//            form.status.appendChild(new Option('Неважно'));
+//            form.status.appendChild(new Option('Преподаватель'));
+//            form.status.appendChild(new Option('Учащийся'));
+            
+            form.user_id.value = query.user_id;
+            form.first_name.value = query.first_name;
+            form.last_name.value = query.last_name;
+            form.email.value = query.email;
+            form.login.value = query.login;
+            form.allow_to_notify.checked=query.allow_to_notify;
+
+//            form.querySelector(".change").onclick=function(){
+//                form.close();
+//                self.change({"user_id":form.user_id.value});
+//            };
+
+            form.onsubmit= function(){
+                var request = Request(function(text){
+                    console.log('userinfo : '+text);
+                    var values = JSON.parse(text);
+                    if (values.error===0){
+                        form.close();
+                        location.reload();
+                        return;
+                    };
+                    alert(text);
+                    
+                });
+                request.open('POST',admin_path+'/auth_proc.php');
+                request.send(new FormData(this));
+                return false;
+            };
+            
+        });
+    };
+    
+    /**
+     * Фукция вызывается из письма пользователя
+     * @param {type} user_id
+     * @param {type} hash
+     * @returns {undefined}
+     */
+    this.confirm = function(user_id,hash){
+        var request = Request(function(text){
+            console.log(text);
+            var a = JSON.parse(text);
+            // нужно поблагодарить
+            location.assign('./');
+            alert(a['message']);
+        });
+        request.open("POST",admin_path+'/auth_proc.php');
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=confirm&user_id='+user_id+'&hash='+hash);
+    };
+    
+    this.register = function(){
+        form = Form({
+            title   :"Регистрация",
+            button  :"Зарегистрироваться",
+            content :
+                '<input name="command" value="register" hidden>'    
+                +'<table>'
+                +'<tr><td>Имя</td> <td><input name="first_name" required></td></tr>'
+                +'<tr><td>Фамилия</td> <td> <input name="last_name" required></td></tr>'
+                +'<tr><td>Адрес эл.почты</td> <td> <input name="email" type="email" required></td></tr>'
+                +'<tr><td>Логин</td> <td><input name="login" required></td></tr>'
+                +'<tr><td>Пароль</td> <td><input name="password1" type="password" required></td></tr>'
+                +'<tr><td>Пароль ещё раз</td> <td><input name="password2" type="password" required></td></tr>'
+                +'<tr><td>&nbsp;</td><td><img src="'+admin_path+'/captcha.php" alt="captcha"></td></tr>'
+                +'<tr><td>Число</td> <td><input name="captcha" required></td></tr>'
+                +'</table>'
+                +'<span class="comments"><strong>Внимание:<strong><br>На указанный элетронный адрес адрес будет отправлено письмо для завершения регистрации</span>',
+            focus : "first_name"    
+
+        });
+        form.onsubmit= function(){
+            
+            var request = Request(function(text){
+                console.log('Регистрация : '+text);
+                var values = JSON.parse(text);
+                if (values.error===0){
+                    form.close();
+                }
+                alert(values.message);
+            });
+            
+            request.open('POST',admin_path+'/auth_proc.php');
+            request.send(new FormData(this));
+            return false;
+        };
+        return false;
+    };
+    
+    
+    this.message = function(){
+        
+        self.read_userinfo(self.user_id,function(data){
+        
+            form = Form({
+                title   :"Сообщение",
+                button  :"Отправить",
+                content :
+                    '<input name="command" value="message" hidden>'    
+                    +'<table>'
+                    +'<tr><td>Тема сообщения</td><td><select name="subject"></select></td></tr>'
+                    +'<tr><td>От кого</td><td><input name="user_name" reqired></td></tr>'
+                    +'<tr><td>Адрес эл.почты для ответа</td><td><input name="email" required></td></tr>'
+                    +'<tr><td colspan="2">Текст сообщения</td></tr>'
+                    +'<tr><td colspan="2"><textarea name="text" rows="5" style="width:100%" required></textarea></td></tr>'
+                    +'<tr><td>&nbsp;</td><td><img src="'+admin_path+'/captcha.php" alt="captcha"></td></tr>'
+                    +'<tr><td>Введите число</td><td><input name="captcha" required></td></tr>'
+                    +'</table>',
+                focus : "subject"    
+            });
+            
+            form.subject.appendChild(new Option("Вопрос по программе"));
+            form.subject.appendChild(new Option("Предложение по улучшению программы"));
+            form.subject.appendChild(new Option("Предложение о сотрудничестве"));
+
+            if ((typeof data.email)!='undefined'){
+                form.email.value = data.email;
+                form.user_name.value = data.last_name+' '+data.first_name;
+            }
+
+            form.onsubmit=function(){
+                var request = Request(function(text){
+                    console.log(text);
+                    var values = JSON.parse(text);
+                    if (values.error===0){
+                        form.close();
+                        alert('Сообщение успешно опрвалено');
+                    } else {
+                        alert(values.message);
+                    }
+                });
+                request.open('POST',admin_path+'/auth_proc.php');
+                request.send(new FormData(this));
+                return false;
+            };
+        });
+        return false;
+        
+    };
+    function permission_update(form){
+        var data = new FormData(form)
+        var request = Request(function(text){
+            alert(text);
+        });
+        request.open('POST',admin_path+'/auth_proc.php');
+        data.append('command','permission_update');
+//        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send(data);
+    }
+    
+    function user_permission(user_id){
+        var request = Request(function(text){
+            
+            console.log(text);
+            
+            var form = document.createElement('form');
+            form.style.cssText="position:fixed;background:#fff; padding:10px;border:1px solid #ccc;";
+//            form.style.background='#fff';
+            form.innerHTML="<div>"+text+"</div>"
+            +"<div><input type='submit' value='Применить'><input type='reset' value='Закрыть'></div>";
+            document.body.appendChild(form);
+            form_center(form);
+            form.onreset = function(){
+                document.body.removeChild(form);
+                form=null;
+                return false;
+            };
+            form.onsubmit = function(){
+                permission_update(this);
+                document.body.removeChild(form);
+                form=null;
+                return false;
+            }
+//            form.onclick = function(event){
+//                var target = event.target;
+//                if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
+//                    if (target.getAttribute('data-action')==='apply'){
+//                        var f = target.closest('form');
+//                        permission_update(f);
+//                        return false;
+//                    }
+//                }
+//            };
+            
+        });
+        
+        request.open('POST',admin_path+'/auth_proc.php');
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=permission&user_id='+user_id);
+        
+        
+    }
+    
+     var user_list_element ;
+     
+     function userlistclick(event){
+        var target = event.target;
+        var table,row,id;
+        var action;
+        if (target.tagName==='A'){
+            if (target.hasAttribute('data-page')){
+                auth.userlist(user_list_element,'page='+target.getAttribute('data-page'));
+            } else  if (target.hasAttribute('data-action')){
+                action = target.getAttribute('data-action');
+                table =user_list_element.querySelector('table');
+                row = target.closest('tr');
+                id = row.getAttribute('data-id');
+                switch(action){
+                    case 'user':
+                        user_permission(id);
+                        break;
+                    default:
+                        alert(action+' - '+id);
+                }
+            }
+            return false;
+        }
+        if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
+            table = user_list_element.querySelector('table');
+            action = target.getAttribute('data-action');
+            row  = target.closest('tr');
+            id = row.getAttribute('data-id');
+            auth.delete_user(id,function(text){
+                var a = JSON.parse(text);
+                if (a['error']===0){
+                    table.deleteRow(row.rowIndex);
+                } else {
+                    alert(text);
+                }
+            });
+            return false;
+        }
+    };
+
+
+    
+    this.userlist=function(element,page){
+        if (typeof element === null){
+            element=document.querySelector('#userlist');
+        }
+        user_list_element = element;
+        user_list_element.onclick = userlistclick;
+        
+        var request = Request(function (text){
+                element.innerHTML = '<h1>Список пользователей</h1>'+text;
+                
+//                element.querySelector('.user-list-panel').onclick = userlistclick;
+                
+        });
+        console.log('typeof page :'+ typeof page);
+        var params = 'command=userlist';
+        if (typeof page !== 'undefined'){
+            params += '&'+page;
+        }
+        
+        request.open('POST',admin_path+'/auth_proc.php');
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send(params);
+        
+    };
+    
+    /**
+     * Процедуры администратора
+     * ------------------------
+     * @param {type} user_id
+     * @param {type} callback
+     * @returns {undefined}
+     */
+    this.delete_user=function(user_id,callback){
+        var request = Request(function(text){
+            callback(text);            
+        });
+        request.open('POST',admin_path+'/auth_proc.php');
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=delete&user_id='+user_id);
+    };
+
+    
+    /**
+     * Восстановление пароля
+     * ---------------------
+     * @param {type} query
+     * @param {type} callback
+     * @returns {undefined}
+     */
+    this.change= function(user_id,hash){
+        form= Form({
+            title   :"Введите новый пароль",
+            button  :"Изменить",
+            content : 
+                   '<input name="command" value="restore" hidden><input name="user_id" hidden><input name="hash" hidden>'
+                   +"<table>"
+                   +"<tr><td>Новый пароль</td><td><input type='password' name='password1' required></td></tr>" 
+                   +"<tr><td>Новый пароль (ещё раз)</td><td><input type='password' name='password2' required></td></tr>" 
+                   +"<tr><td>&nbsp;</td><td>&nbsp;</td></tr>" 
+                   +"</table>"
+        });
+        form.user_id.value = user_id;
+        form.hash.value = hash;
+        form.onsubmit=function(){
+            var request = Request(function(text){
+                console.log(text);
+                var a = JSON.parse(text);
+                if (a['error']===0){
+                    location.assign('./');
+                    return;
+                }
+                alert(a['message']);
+            });
+            request.open('POST',admin_path+'/auth_proc.php'); //'/change_password.php');
+            request.send(new FormData(this));
+            return false;
+        };
+        
+    };
+    
+    admin_element.onclick=function(event){
+        var target = event.target;
+        if (target.tagName==='A'){
+            self[target.getAttribute('data-action')]();
+            return false;
+        }
+    };
+    
+
+    var search = location.search;
+    if (search.length>0){
+        console.log(search);
+        var param = {};
+        
+        param.getValue=function(key){
+            for(k in this){
+                if (k===key){
+                    return this[k];
+                }
+            }
+        };
+        
+        var tmp = search.slice(1).split('&');
+        for (i=0;i<tmp.length;i++){
+            var p = tmp[i].split('=');
+            console.log(p[0]+' '+p[1]);
+            param[p[0]]=p[1];
+        };
+        var  hash       = param.getValue('hash'),
+             register   = param.getValue('register'),
+             restore    = param.getValue('restore');
+        
+        
+        if ((typeof restore !=='undefined')  && (typeof hash !=='undefined')){
+            self.change(restore,hash);
+        }
+        
+        if ((typeof register !== 'undefined')&&(typeof hash !== 'undefined')){
+            self.confirm(register,hash);
+        }
+    }
+    
+}

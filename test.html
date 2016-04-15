@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+    </head>
+    <body>
+        
+        <a href="?p1=222">link1</a><br>
+        <a href="?register=289&hash=12345678">Регистрация</a><br>
+        <a href="?email=289&email=viljinsky@narod.ru">Смена емайл</a><br>
+        <a href="?password=289&hash=uwiwyibhjwgj">восстановление пароля</a><br>
+        <a href="#" id="test">test</a>
+        
+        <script>
+            
+            var a = [];
+            
+            var search = location.search;
+            if (search.length>0){
+                var p = search.slice(1).split('&');
+                for (i=0;i<p.length;i++){
+                    var s = p[i].split('=');
+                    a[s[0]]=s[1];
+                }
+            }
+            
+            if (a.length>0){
+                alert(a);
+            }
+            
+            test.onclick=function(){
+                location.assign('./');
+                alert('click');
+                return false;
+            }
+            
+        </script>
+    </body>
+</html>
