@@ -3,7 +3,8 @@
     left:0;
     top:0;
     background: #fff;
-    border: 1px solid #ccc; 
+    border: 1px solid #ccc;
+    box-shadow: 0 0 10px rgba(0,0,0,.5);
 }
 .dialog-form .comments {font-size: x-small;}
 

@@ -25,7 +25,7 @@
             } 
         } 
     }
-      $user_id=$_SESSION['user_id'];
+    $user_id=$_SESSION['user_id'];
 ?>
         
 <ul class="admin">

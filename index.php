@@ -52,7 +52,7 @@
         <script>
             
 
-            var auth = new Auth(admin,{user_id:'<?=$user_id?>',admin_path:'<?=ADMIN_PATH?>'});
+            var auth = new Auth(admin,<?= intval($_SESSION['user_id'])?>);
             
             message.onclick=auth.message;
             

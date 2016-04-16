@@ -36,7 +36,7 @@
 в конце body
 
     <script>
-        var auth = new Auth(admin,{user_id:'<?=$user_id?>',admin_path:'<?=ADMIN_PATH?>'});
+        var auth = new Auth(admin,<?= intval($_SEESION[$user_id]) ?>');
         message.onclick=auth.message;
         if (typeof  users!=='undefined'){
             users.onclick=function(){

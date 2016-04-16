@@ -1,12 +1,12 @@
+/**
+ * Выравнивание формы по центру экрана
+ * @param {type} form
+ * @returns {undefined}
+ */
 function form_center(form){
 
-    var w = document.documentElement.clientWidth,
-        h= document.documentElement.clientHeight,
-        w1 = form.clientWidth,
-        h1 = form.clientHeight;
-
-    form.style.left= Math.floor((w-w1)/2)+'px';
-    form.style.top=Math.floor((h-h1)/2)+'px';
+    form.style.left= Math.floor((document.documentElement.clientWidth-form.clientWidth)/2)+'px';
+    form.style.top=Math.floor((document.documentElement.clientHeight-form.clientHeight)/2)+'px';
 }
 
 function Request(callback){
@@ -37,12 +37,10 @@ function Form(option){
                    +option.content
                    +'</div>'
                    +'<div class="dialog-form-footer">'
-                   +'<div style="float:right;"><input type="submit" value="'+option.button+'">'
-                   +'<button class="close-dialog">Закрыть</button></div></div>';
+                   +'<input type="submit" value="'+option.button+'">'
+                   +'<button class="close-dialog">Закрыть</button></div>';
     document.body.appendChild(form);
     form_center(form);
-//    form.style.left= Math.floor( document.documentElement.clientWidth/2 - form.clientWidth/2 )+'px';
-//    form.style.top = Math.floor(document.documentElement.clientHeight/2 - form.clientHeight/2)+'px';
     form.querySelector('.close-dialog').onclick=function(){
         form.close();
         return false;
@@ -61,25 +59,26 @@ function Form(option){
 /**
  *  Объект аутодентификации
  *  @admin_element дом-елемент - меню аудентификации
- *  @options :
- *      admin_path - пукть к библиотеке
- *      user_id    - текущий пользователь
+ *  @user_id    - текущий пользователь
  **/
-function Auth(admin_element,options){
+function Auth(admin_element,user_id){
+
+    /**путь к папке auth*/
+    var ADMIN_PATH = './libs/auth/auth_proc.php';
 
     var form = null;
     var self = this;
     
-    /**путь к папке auth*/
-    var admin_path=options['admin_path'];
+    /**путь к папке auth для captchar*/
+    var admin_path= './libs/auth' ;
     
-    this.user_id = options.user_id;
+//    this.user_id = options.user_id;
     
     this.read_userinfo = function(user_id,callback){
       var request = Request(function(text){
            callback(JSON.parse(text));
       });
-      request.open('POST',admin_path+'/auth_proc.php');
+      request.open('POST',ADMIN_PATH);
       request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
       request.send('command=userinfo&user_id='+user_id);
     };
@@ -97,7 +96,7 @@ function Auth(admin_element,options){
     
     /** форма изменения ел.адреса*/
     this.email=function(){
-        self.read_userinfo(self.user_id,function(user){
+        self.read_userinfo(user_id,function(user){
             if (user.error===0){
                 form = new Form({
                     content: "<input name='user_id' hidden ><br>Укажите адрес электронной почты <input  name='email'>",
@@ -135,7 +134,7 @@ function Auth(admin_element,options){
                 }
                 alert(values.message);
             });
-            request.open('POST',admin_path+'/auth_proc.php');
+            request.open('POST',ADMIN_PATH);
             request.send(new FormData(this));
             return false;
         };
@@ -163,7 +162,7 @@ function Auth(admin_element,options){
                 callback(values);
             }
         });
-        request.open('POST',admin_path+'/remember.php');
+        request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         request.send('login='+ login+'&pwd='+pwd);
     };
@@ -175,11 +174,11 @@ function Auth(admin_element,options){
     this.login=function(){
         form = Form({
             content :
-                    '<input name="command" value="login" hidden>'+
+//                    '<input name="command" value="login" hidden>'+
                     '<table>'+    
                     '<tr><td>Логин или email</td><td><input name="login" placeholder="логин" requered></td></tr>'+
                     '<tr><td>Пароль</td><td><input name="password" type="password" placeholder="пароль" requered></td></tr>'+
-                    '<tr><td>&nbsp;</td><td><input type="checkbox" name = "remember_me" checked>Запомнить</td></tr>'+
+                    '<tr><td>&nbsp;</td><td><input type="checkbox" name = "remember_me" checked value="true">Запомнить</td></tr>'+
                     '<tr><td colspan="2"><a href="#" data-action = "forget" >Забыли пароль (логин)?</a></td></tr>'+
 //                    '<tr><td colspan="2"><a href="#" data-action = "dontmail">Не пришло письмо подтверждения?</a></td></tr>'+
                     '</table>',
@@ -211,12 +210,12 @@ function Auth(admin_element,options){
                     var values = JSON.parse(text);
                     switch (values.error){
                         case 0:
-                            self.user_id=values.user_id;
+                            user_id=values.user_id;
                             form.close();
                             location.reload();
                             return;
                         case 37:
-                            self.user_id=values.user_id;
+                            user_id=values.user_id;
                             if (confirm(text)){
                                 form.close();
                                 self.email();
@@ -228,8 +227,10 @@ function Auth(admin_element,options){
                     }
                 
             });
-            request.open('POST',admin_path+'/auth_proc.php')// login.php');
-            request.send(new FormData(this));
+            var data = new FormData(this);
+            data.append('command','login');
+            request.open('POST',ADMIN_PATH);
+            request.send(data);
             return false;
         };
         return false;        
@@ -241,7 +242,7 @@ function Auth(admin_element,options){
 //                alert(text);
                 document.location.reload();            
         });
-        request.open('POST',admin_path+'/auth_proc.php');
+        request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send('command=logout');
         return false;
@@ -251,10 +252,10 @@ function Auth(admin_element,options){
     /** Информация о пользователе */
     this.userinfo=function(){
         
-        self.read_userinfo(self.user_id,function(query){
+        self.read_userinfo(user_id,function(query){
             form = Form({
                 content :
-                       '<input name="command" value="update" hidden><input name="user_id" hidden>' 
+                       '<input name="user_id" hidden>' 
                        + '<table>'
                        + '<tr><td>Логин</td><td><input name="login" readonly></td></tr>'
                        +'<tr><td>email</td><td><input name="email" readonly></td></tr>'
@@ -264,7 +265,7 @@ function Auth(admin_element,options){
 //                       +'<tr><td>Город</td><td><input name="town"></td></tr>'
 //                       +'<tr><td>Страна</td><td><input name="country"></td></tr>'           
 //                       +'<tr><td>Учебное заведение</td><td><input name="educational"></td></tr>'
-                       +'<tr><td>Присылать мне новости</td><td><input type="checkbox" name="allow_to_notify"></td></tr>'
+                       +'<tr><td>Присылать мне новости</td><td><input type="checkbox" name="allow_to_notify" value="true"></td></tr>'
 //                       +'<tr><td colspan="2" style="text-align:right"><a class="change" href="#">Изменить пароль</a></td></tr>'
                        +'</table>',
                 title   : "Информация о пользователе",
@@ -299,8 +300,10 @@ function Auth(admin_element,options){
                     alert(text);
                     
                 });
-                request.open('POST',admin_path+'/auth_proc.php');
-                request.send(new FormData(this));
+                var data = new FormData(this);
+                data.append('command','update_userinfo');
+                request.open('POST',ADMIN_PATH);
+                request.send(data);
                 return false;
             };
             
@@ -321,7 +324,7 @@ function Auth(admin_element,options){
             location.assign('./');
             alert(a['message']);
         });
-        request.open("POST",admin_path+'/auth_proc.php');
+        request.open("POST",ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send('command=confirm&user_id='+user_id+'&hash='+hash);
     };
@@ -357,7 +360,7 @@ function Auth(admin_element,options){
                 alert(values.message);
             });
             
-            request.open('POST',admin_path+'/auth_proc.php');
+            request.open('POST',ADMIN_PATH);
             request.send(new FormData(this));
             return false;
         };
@@ -367,7 +370,7 @@ function Auth(admin_element,options){
     
     this.message = function(){
         
-        self.read_userinfo(self.user_id,function(data){
+        self.read_userinfo(user_id,function(data){
         
             form = Form({
                 title   :"Сообщение",
@@ -406,7 +409,7 @@ function Auth(admin_element,options){
                         alert(values.message);
                     }
                 });
-                request.open('POST',admin_path+'/auth_proc.php');
+                request.open('POST',ADMIN_PATH);
                 request.send(new FormData(this));
                 return false;
             };
@@ -414,27 +417,41 @@ function Auth(admin_element,options){
         return false;
         
     };
+    
+    /**
+     * Применить изменения в форме разрешения
+     * @param {type} form
+     * @returns {undefined}
+     */
     function permission_update(form){
         var data = new FormData(form)
         var request = Request(function(text){
             alert(text);
         });
-        request.open('POST',admin_path+'/auth_proc.php');
+        request.open('POST',ADMIN_PATH);
         data.append('command','permission_update');
-//        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send(data);
     }
     
+    /**
+     * Открыть форму с разрешниями пользователя
+     * @param {type} user_id
+     * @returns {undefined}
+     */
     function user_permission(user_id){
+        
         var request = Request(function(text){
             
-            console.log(text);
-            
             var form = document.createElement('form');
-            form.style.cssText="position:fixed;background:#fff; padding:10px;border:1px solid #ccc;";
-//            form.style.background='#fff';
-            form.innerHTML="<div>"+text+"</div>"
-            +"<div style='text-align:right;'><input type='submit' value='Применить'><input type='reset' value='Закрыть'></div>";
+            form.className='dialog-form';
+            form.innerHTML = 
+                     '<div class="dialog-form-title">Разрешения</div>'
+                    +'<div class="dialog-form-content">'+text+'</div>'
+                    +'<div class="dialog-form-footer">'
+                    +'  <input type="submit" value="Применить">'
+                    +'  <input type="reset" value="Закрыть">'
+                    +'</div>';
+            
             document.body.appendChild(form);
             form_center(form);
             form.onreset = function(){
@@ -448,25 +465,21 @@ function Auth(admin_element,options){
                 form=null;
                 return false;
             }
-//            form.onclick = function(event){
-//                var target = event.target;
-//                if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
-//                    if (target.getAttribute('data-action')==='apply'){
-//                        var f = target.closest('form');
-//                        permission_update(f);
-//                        return false;
-//                    }
-//                }
-//            };
             
         });
         
-        request.open('POST',admin_path+'/auth_proc.php');
+        request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send('command=permission&user_id='+user_id);
         
         
     }
+    
+     //-----------------------------------------------
+     //            Списки пользователей
+     // 
+     //-----------------------------------------------
+    
     
      var user_list_element ;
      
@@ -520,9 +533,6 @@ function Auth(admin_element,options){
         
         var request = Request(function (text){
                 element.innerHTML = '<h1>Список пользователей</h1>'+text;
-                
-//                element.querySelector('.user-list-panel').onclick = userlistclick;
-                
         });
         console.log('typeof page :'+ typeof page);
         var params = 'command=userlist';
@@ -530,7 +540,7 @@ function Auth(admin_element,options){
             params += '&'+page;
         }
         
-        request.open('POST',admin_path+'/auth_proc.php');
+        request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send(params);
         
@@ -547,7 +557,7 @@ function Auth(admin_element,options){
         var request = Request(function(text){
             callback(text);            
         });
-        request.open('POST',admin_path+'/auth_proc.php');
+        request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         request.send('command=delete&user_id='+user_id);
     };
@@ -584,7 +594,7 @@ function Auth(admin_element,options){
                 }
                 alert(a['message']);
             });
-            request.open('POST',admin_path+'/auth_proc.php'); //'/change_password.php');
+            request.open('POST',ADMIN_PATH);
             request.send(new FormData(this));
             return false;
         };

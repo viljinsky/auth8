@@ -43,7 +43,7 @@ if (isset($command)){
         case 'userinfo':
             echo read_userinfo();
             break;
-        case 'update':
+        case 'update_userinfo':
             echo update_userinfo();
             break;
         case 'userlist':
@@ -171,13 +171,8 @@ class Permission{
 }
 
 function permission(){
-//    $user_id = filter_input(INPUT_POST,'user_id');
     $p = new Permission();
     $p->edit();
-    
-//    $p->user_permission($user_id);
-//    $p->user_visits($user_id);
-//    $p->user_download($user_id);
 }
 
 function permission_update(){
@@ -223,7 +218,7 @@ function login(){
             $_SESSION['user_name']  = $user_name;
             $_SESSION['role_id']    = $role_id;
 
-            if ($remember_me=='on'){
+            if ($remember_me){
                     setcookie('login', $login,time()+3600*24*31,'/');
                     setcookie('pwd',$pwd,time()+3600*24*31,'/');
             }
@@ -361,11 +356,11 @@ function update_userinfo(){
     $user_id    = filter_input(INPUT_POST,'user_id');
     $first_name = filter_input(INPUT_POST,'first_name');
     $last_name  = filter_input(INPUT_POST,'last_name');
-    if (filter_input(INPUT_POST,'allow_to_notify')=='on'){
-        $allow_to_notify= 'true';
-    } else {
+    $allow_to_notify = filter_input(INPUT_POST,'allow_to_notify');
+    if (empty($allow_to_notify)){        
         $allow_to_notify= 'false';
     }
+    
 
     $sql = "update users set first_name='$first_name',last_name='$last_name',allow_to_notify=$allow_to_notify where user_id=$user_id";
     if (!mysql_query($sql)){
