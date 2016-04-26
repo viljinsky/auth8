@@ -82,17 +82,6 @@ function Auth(admin_element,user_id){
       request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
       request.send('command=userinfo&user_id='+user_id);
     };
-
-//    function confirm_email(user_id,email,callback){
-//        var request = Request(function(text){
-//            callback('Вам отправлено сообщение :'+text);
-//            }
-//        );
-//        
-//        request.open('POST',admin_path+'/change_email.php');
-//        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-//        request.send('user_id='+user_id+'&email='+email);
-//    }
     
     /** форма изменения ел.адреса*/
     this.email=function(){
@@ -120,7 +109,7 @@ function Auth(admin_element,user_id){
     
     this.forget=function(){
         form = Form({
-            content:'<input name="command" value="forget" hidden>'+"Введите логин или email <input name='login_or_email' required><br>",
+            content:"Введите логин или email <input name='login_or_email' required><br>",
             title:  "Восстановление входа",
             button: "Восстановить",
             focus:  "login_or_email"
@@ -129,15 +118,16 @@ function Auth(admin_element,user_id){
             var request = Request(function(text){
                 if (text.length===0){
                     form.close();
-                
                     alert('На электронный алрес, указанный \n\
-                  Вами при регистрации отправлено письио с инструкциями');
+                      Вами при регистрации отправлено письио с инструкциями');
                 } else {
                     alert(text);
                 }
             });
+            var data = new FormData(this);
+            data.append("command","forget");
             request.open('POST',ADMIN_PATH);
-            request.send(new FormData(this));
+            request.send(data);
             return false;
         };
         return false;
@@ -238,8 +228,7 @@ function Auth(admin_element,user_id){
     /** Выход пользователя*/
     this.logout=function(){
         var request = Request(function(text){
-//                alert(text);
-                document.location.reload();            
+            document.location.reload();            
         });
         request.open('POST',ADMIN_PATH);
         request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
@@ -254,38 +243,23 @@ function Auth(admin_element,user_id){
         self.read_userinfo(user_id,function(query){
             form = Form({
                 content :
-                       '<input name="user_id" hidden>' 
-                       + '<table>'
+                         '<table>'
                        + '<tr><td>Логин</td><td><input name="login" readonly></td></tr>'
                        +'<tr><td>email</td><td><input name="email" readonly></td></tr>'
                        +'<tr><td>Фамилия</td><td><input name="last_name"></td></tr>'
                        +'<tr><td>Имя</td><td><input name="first_name"></td></tr>'
-//                       +'<tr><td>Статус</td><td><select name="status"></select></td></tr>'
-//                       +'<tr><td>Город</td><td><input name="town"></td></tr>'
-//                       +'<tr><td>Страна</td><td><input name="country"></td></tr>'           
-//                       +'<tr><td>Учебное заведение</td><td><input name="educational"></td></tr>'
                        +'<tr><td>Присылать мне новости</td><td><input type="checkbox" name="allow_to_notify" value="true"></td></tr>'
-//                       +'<tr><td colspan="2" style="text-align:right"><a class="change" href="#">Изменить пароль</a></td></tr>'
                        +'</table>',
                 title   : "Информация о пользователе",
                 button  : "Применить"
             });
 
-//            form.status.appendChild(new Option('Неважно'));
-//            form.status.appendChild(new Option('Преподаватель'));
-//            form.status.appendChild(new Option('Учащийся'));
-            
-            form.user_id.value = query.user_id;
             form.first_name.value = query.first_name;
             form.last_name.value = query.last_name;
             form.email.value = query.email;
             form.login.value = query.login;
             form.allow_to_notify.checked=query.allow_to_notify;
 
-//            form.querySelector(".change").onclick=function(){
-//                form.close();
-//                self.change({"user_id":form.user_id.value});
-//            };
 
             form.onsubmit= function(){
                 var request = Request(function(text){
@@ -300,6 +274,7 @@ function Auth(admin_element,user_id){
                     
                 });
                 var data = new FormData(this);
+                data.append('user_id',query.user_id);
                 data.append('command','update_userinfo');
                 request.open('POST',ADMIN_PATH);
                 request.send(data);

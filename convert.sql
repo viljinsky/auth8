@@ -1,5 +1,5 @@
--- use auth8;
-use docsmd3;
+use auth8;
+-- use docsmd3;
 
 insert into user_role (role_id,role_name) values (1,'Гость');
 
