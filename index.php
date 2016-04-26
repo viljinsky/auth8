@@ -40,6 +40,7 @@
                 <a href="#" id="users" >Список пользователей</a>
                 <?php } ?>
 
+                <div ><form id="finduser"><input name="userlocate" placeholder="Найти пользователя..."><input type="submit" value="Найти"></form></div>
                 <div id="userlist"></div>
 
             </div>
@@ -49,12 +50,20 @@
             2016 &copy; <a href="#" id="message" title="Написать сообщение">Ильинский В.В.</a>
         </footer>
         
+        
         <script>
-            
 
             var auth = new Auth(admin,<?= intval($_SESSION['user_id'])?>);
-            
             message.onclick=auth.message;
+
+            if (finduser!==null){             
+                finduser.onsubmit = function(){
+                    auth.locate(this,userlist);
+                    return false;
+                };
+            }
+
+            
             
             if (typeof  users!=='undefined'){
                 users.onclick=function(){

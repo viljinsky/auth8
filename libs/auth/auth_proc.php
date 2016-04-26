@@ -52,6 +52,9 @@ if (isset($command)){
             break;
         
         #информация для администраторв
+        case 'locate':
+            locate();
+            break;
         
         case 'userlist':
             echo userlist();
@@ -65,6 +68,8 @@ if (isset($command)){
         case 'delete':
             echo delete_user();
             break;
+        default :
+            echo 'unknow commad "'.$command.'"';
     }
 }
         
@@ -133,6 +138,7 @@ function logout(){
  * @return type
  */
 
+
 function register(){
 
     $secret = $_SESSION['secret'];
@@ -178,13 +184,20 @@ function register(){
         $subject = 'Составитель расписания.Регистрация ';
         
         $message = 
-            '<p>На сайте составительрасписания.рф при регистрации был указан Ваш электронный адрес.</p>'.
-            '<ul><li>Если это были Вы, то для завершения регистрации перейдите по ссылке : <a href="'.$link.'">Завершить регистрацию</a>'.
-            "</li>".
-            "<li>".
-            "Если Вы не регистрировались на сайте cоставительрасписания.рф (письмо пришло к Вам по ошибке),".
-            "просто проигнорируйте его".            
-            "</li></ul>";
+            '<p>
+                На сайте составительрасписания.рф при регистрации был указан 
+                Ваш электронный адрес.
+            </p>
+            <ul>
+                <li>
+                    Если это были Вы, то для завершения регистрации перейдите по ссылке :
+                    <a href="'.$link.'">Завершить регистрацию</a>
+                </li>
+                <li>
+                    Если Вы не регистрировались на сайте cоставительрасписания.рф 
+                    (письмо пришло к Вам по ошибке), просто проигнорируйте его            
+                </li>
+           </ul>';
         
 
 
@@ -342,14 +355,31 @@ function forget(){
     $link = LOCATION.'/?restore='.$user_id.'&hash='.$pwd;
 
     $message = 
-         '<p>На сайте составительрасписания.рф выполнен зпрос на изменение пароля '.
-         'учетной записи для которой указан Ваш электронный адрес.<p>'.
-         '<ul><li>Если запрос выполнен Вами, для изменения пароля перейдите по ссылке : '.
-         '<a href="'.$link.'">Изменение пароля</a></li>'.
-         '<li>Если Вы делали запрос но передумали менять пароль (вспомнили) - игнорируйте это письмо (пароль останется прежним)</li>'.   
-         '<li>Если Вы не делали запроса, рекомендуется проверить Вашу учётную запись(возможна попытка взлома).При этом, если пароль был изменён без Вашего ведома - обязательно сообщите администратору сайта.</li>'.
-         '<li>Если Вы не регистрировались на сайте составительрасписания.рф (кто то другой случайно указал Ваш адрес) можете просто проигнорировать это письмо</li>'.
-         '</ul>';
+         '<p>
+             На сайте составительрасписания.рф выполнен зпрос на изменение пароля 
+             учетной записи для которой указан Ваш электронный адрес.
+         <p>
+         <ul>
+            <li>
+                Если запрос выполнен Вами, для изменения пароля перейдите по ссылке : 
+                <a href="'.$link.'">Изменение пароля</a>
+            </li>
+            <li>
+                Если Вы делали запрос но передумали менять пароль (вспомнили)
+                - игнорируйте это письмо (пароль останется прежним)
+            </li>
+            <li>
+                Если Вы не делали запроса, рекомендуется проверить 
+                Вашу учётную запись(возможна попытка взлома). 
+                При этом, если пароль был изменён без Вашего ведома - 
+                обязательно сообщите администратору сайта.
+            </li>
+            <li>
+                Если Вы не регистрировались на сайте составительрасписания.рф 
+                (кто то другой случайно указал Ваш адрес) можете просто 
+                проигнорировать это письмо
+            </li>
+         </ul>';
     mail($email, 'Восстановление пароля', $message);
 }
 
@@ -402,6 +432,31 @@ function delete_user(){
 }
 
 
+function locate(){
+    $locate = urldecode(filter_input(INPUT_POST,'userlocate'));
+    echo $locate;
+//    mysql_query("SET NAMES 'UTF8'") or die(mysql_error());
+    $result = mysql_query("select * from v_users where login like '%$locate%' or user_name like '%$locate%' or email like '%$locate%'") or die(mysql_error());
+    if (mysql_num_rows($result)===0){
+        echo 'Ничего не найдено';
+        return;
+    }
+    $html = '<table>';
+    $recno = 0;
+    while ($data = mysql_fetch_array($result)){
+        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
+        $recno++;
+        $html .='<tr data-id="'.$user_id.'">';
+        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
+            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
+             ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
+        $html .='</tr>';
+    }
+
+    $html.='</table>';
+    echo $html;
+}
+
 /**
  * Список пользователей
  * @return string
@@ -439,14 +494,14 @@ function userlist(){
 
     $html.='</table>';
 
-    $first = $page>1?'<a href="#" data-page="1">1</a>...':'';
-    $prior = $page>2?'<a href="#" data-page="'.($page-1).'" >'.($page-1).'</a>':'&nbsp';
-    $next  = $page<$page_count-1?'<a href="#" data-page="'.($page+1).'">'.($page+1).'</a>':'&nbsp;';
-    $last  = $page<$page_count?'...<a href="#" data-page="'.$page_count.'">'.$page_count.'</a>':'';
+    $first = $page>1?'<a href="#" data-page="1">Страница 1</a>...':'&nbsp;';
+    $prior = $page>2?'<a href="#" data-page="'.($page-1).'" >Страница '.($page-1).'</a>':'&nbsp';
+    $next  = $page<$page_count-1?'<a href="#" data-page="'.($page+1).'">Страница '.($page+1).'</a>':'&nbsp;';
+    $last  = $page<$page_count?'...<a href="#" data-page="'.$page_count.'">Страница '.$page_count.'</a>':'&nbsp';
 
     $html.= '<div>всего пользователей <b>'.$usercount.'</b></div>';
 
-    $html.= $first.$prior.'&nbsp;'.$page.'&nbsp'.$next.$last;
+    $html.= $first.$prior.'&nbsp;Страница '.$page.'&nbsp'.$next.$last;
 
     return  '<div class="user-list-panel">'.$html.'</div>';
     

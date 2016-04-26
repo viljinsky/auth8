@@ -63,7 +63,7 @@ function Form(option){
  **/
 function Auth(admin_element,user_id){
 
-    /**путь к папке auth*/
+    /**путь к папке файлу auth_proc.php */
     var ADMIN_PATH = './libs/auth/auth_proc.php';
 
     var form = null;
@@ -587,6 +587,24 @@ function Auth(admin_element,user_id){
     };
 
 
+    /**
+     * Поиск пользователя
+     * @param {type} form
+     * @param {type} output
+     * @returns {undefined}
+     */
+    this.locate = function(form,output){
+        var request = Request(function(text){
+            output.innerHTML= text;
+        });
+        request.open('POST', ADMIN_PATH);// './libs/auth/auth_proc.php');
+        var data = new FormData(form);
+        data.append('command','locate');
+        request.send(data);
+   }
+        
+        
+    
     
     this.userlist=function(element,page){
         if (typeof element === null){
