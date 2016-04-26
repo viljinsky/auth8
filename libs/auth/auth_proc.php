@@ -31,11 +31,11 @@ if (isset($command)){
         # забыл
         
         case 'forget':
-            echo forget();
+            forget();
             break;
         # восстановление
         case 'restore':
-            echo restore();
+            restore();
             break;
         
         # сообщение пользователя 
@@ -321,20 +321,19 @@ function forget(){
 
     $login_or_email = urldecode(filter_input(INPUT_POST,'login_or_email'));
 
-    $sql = "select email,pwd,user_id,concat(last_name,' ',first_name) from users "
+    $sql = "select email,pwd,user_id,concat(last_name,' ',first_name),email_confirmed from users "
           ." where login='$login_or_email' or email='$login_or_email'";
-    $result = mysql_query($sql);
-    if (!$result){
-        return '{"error":'.ERROR_SQL.',"message":"'. mysql_error().'","'.$sql.'"}';
-    }
+    $result = mysql_query($sql) or die(mysql_error());
+    
 
     if (mysql_num_rows($result)==0){
-        return '{"error":'.ERROR_USER_NOT_FOUND.','
-             .'"message":"Пользователя с таким email или логином не найдено"}';    
+        echo 'Пользователя с таким email или логином не найдено';    
     }
 
     $data=  mysql_fetch_array($result);
-    list($email,$pwd,$user_id,$user_name) = $data;
+    list($email,$pwd,$user_id,$user_name,$email_confirmed) = $data;
+    
+    if ($email_confirmed){
 
 
     # нужно попасть в скрипт
@@ -343,15 +342,14 @@ function forget(){
     $message = 'Для изменения пароля перейдите по ссылке '
             .'<a href="'.$link.'">Изменение пароля</a>';
     mail($email, 'Восстановление пароля', $message);
+    } else {
+        echo 'К сожалению адрес электронной почты указаный пр регистрации не поддтерждён';
+    }
 
-    return '{"error":'.ERROR_OK.','
-        .'"message":"На адрес электронной почты '
-            .$data['email']
-            .', указанный при регистрации отправлено письмо '
-            .$data['user_id'].'"}';
 }
 /**
  * Восстановление пароля часть 2-я
+ * Пользователь вошёл по ссылке из письма
  * @return type
  */
 function restore(){
@@ -362,22 +360,19 @@ function restore(){
     $password2 = html_entity_decode(filter_input(INPUT_POST,'password2'));
 
     if ($password1!==$password2){
-        return '{"error":'.ERROR_BAD_PASSWORD.',"message":"Пароли не совпадают"}';
+        die('Пароли не совпадают');
+        
     }
 
     $result = mysql_query("select user_id,concat(last_name,' ',first_name),role_id from users where user_id=$user_id and pwd='$hash'")
              or die(mysql_error());
-    if (mysql_num_rows($result)===1){
-        $data = mysql_fetch_array($result);
-        $newpwd = md5($password1.TOPSICRET);
-        mysql_query("update users set pwd='$newpwd',email_confirmed=true where user_id=".$data['user_id']) or die(mysql_error());
-
-        list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id'])=$data;
-        return '{"error":'.ERROR_OK.',"message":"OK"}';
+    if (mysql_num_rows($result)!==1) {
+        die('upss! user not found!?');
     }
-
-    return '{"error":'.ERROR_USER_NOT_FOUND.',"message":"user not found"}';
-
+    $data = mysql_fetch_array($result);
+    $newpwd = md5($password1.TOPSICRET);
+    mysql_query("update users set pwd='$newpwd',email_confirmed=true where user_id=".$data['user_id']) or die(mysql_error());
+    list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id'])=$data;
 }
 
 

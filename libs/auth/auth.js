@@ -127,12 +127,14 @@ function Auth(admin_element,user_id){
         });
         form.onsubmit=function(){
             var request = Request(function(text){
-                console.log(text);
-                var values = JSON.parse(text);
-                if (values.error===0){
+                if (text.length===0){
                     form.close();
+                
+                    alert('На электронный алрес, указанный \n\
+                  Вами при регистрации отправлено письио с инструкциями');
+                } else {
+                    alert(text);
                 }
-                alert(values.message);
             });
             request.open('POST',ADMIN_PATH);
             request.send(new FormData(this));
@@ -435,27 +437,28 @@ function Auth(admin_element,user_id){
             title   :"Введите новый пароль",
             button  :"Изменить",
             content : 
-                   '<input name="command" value="restore" hidden><input name="user_id" hidden><input name="hash" hidden>'
-                   +"<table>"
+                   "<table>"
                    +"<tr><td>Новый пароль</td><td><input type='password' name='password1' required></td></tr>" 
                    +"<tr><td>Новый пароль (ещё раз)</td><td><input type='password' name='password2' required></td></tr>" 
                    +"<tr><td>&nbsp;</td><td>&nbsp;</td></tr>" 
                    +"</table>"
         });
-        form.user_id.value = user_id;
-        form.hash.value = hash;
         form.onsubmit=function(){
             var request = Request(function(text){
-                console.log(text);
-                var a = JSON.parse(text);
-                if (a['error']===0){
+                if (text.length===0){
+                    alert("Новый пароль вступил в действие");
                     location.assign('./');
-                    return;
+                } else {
+                    alert(text);
+                    return false;
                 }
-                alert(a['message']);
             });
+            var data = new FormData(this)
+            data.append("command","restore");
+            data.append("user_id",user_id);
+            data.append("hash",hash);
             request.open('POST',ADMIN_PATH);
-            request.send(new FormData(this));
+            request.send(data);
             return false;
         };
         
