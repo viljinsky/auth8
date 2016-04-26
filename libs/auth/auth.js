@@ -174,7 +174,6 @@ function Auth(admin_element,user_id){
     this.login=function(){
         form = Form({
             content :
-//                    '<input name="command" value="login" hidden>'+
                     '<table>'+    
                     '<tr><td>Логин или email</td><td><input name="login" placeholder="логин" requered></td></tr>'+
                     '<tr><td>Пароль</td><td><input name="password" type="password" placeholder="пароль" requered></td></tr>'+
@@ -188,7 +187,7 @@ function Auth(admin_element,user_id){
         });
         
         form.onclick=function(event){
-            if (event.target.tagName==='A'){
+            if (event.target.tagName==='A' && event.target.hasAttribute('data-action')){
                 var action = event.target.getAttribute('data-action');
 
                 switch (action){
@@ -203,7 +202,7 @@ function Auth(admin_element,user_id){
                 }
             }
         };
-        form.action
+//        form.action
         form.onsubmit = function(){
             var request = Request(function(text){
                 console.log('login responce = "'+text+'"');
@@ -214,14 +213,12 @@ function Auth(admin_element,user_id){
                             form.close();
                             location.reload();
                             return;
+                        // Аддрес не подтверждён    
                         case 37:
                             user_id=values.user_id;
-                            if (confirm(text)){
-                                form.close();
-                                self.email();
-                                return;
-                            }
-                            break;
+                            alert(values.message)
+//                            form.close();
+                            return false;
                         default :   
                             alert(' '+values.error+' '+values.message);
                     }
@@ -355,9 +352,17 @@ function Auth(admin_element,user_id){
                 console.log('Регистрация : '+text);
                 var values = JSON.parse(text);
                 if (values.error===0){
+                    var message = 
+                            "На указанный Вами e-mail в течении некоторого времени (несколько минут) придет подтверждение."
+                           +"Если подтверждение вдруг не пришло, сделайте следующее:\n"
+                           +" а) попробуйте проверить папку 'Спам' в Вашем почтовом ящике(иногда письма попадают туда)\n"
+                           +" б) оставте сообщение на сайте с указаем фамилии имени и адреса\n"  
+                           +" в) напишите письмо на timetabler@narod.ru с указанием Фамилии и Имени";
                     form.close();
+                    alert(message);
+                } else {
+                    alert(values.message);
                 }
-                alert(values.message);
             });
             
             request.open('POST',ADMIN_PATH);
@@ -417,151 +422,6 @@ function Auth(admin_element,user_id){
         return false;
         
     };
-    
-    /**
-     * Применить изменения в форме разрешения
-     * @param {type} form
-     * @returns {undefined}
-     */
-    function permission_update(form){
-        var data = new FormData(form)
-        var request = Request(function(text){
-            alert(text);
-        });
-        request.open('POST',ADMIN_PATH);
-        data.append('command','permission_update');
-        request.send(data);
-    }
-    
-    /**
-     * Открыть форму с разрешниями пользователя
-     * @param {type} user_id
-     * @returns {undefined}
-     */
-    function user_permission(user_id){
-        
-        var request = Request(function(text){
-            
-            var form = document.createElement('form');
-            form.className='dialog-form';
-            form.innerHTML = 
-                     '<div class="dialog-form-title">Разрешения</div>'
-                    +'<div class="dialog-form-content">'+text+'</div>'
-                    +'<div class="dialog-form-footer">'
-                    +'  <input type="submit" value="Применить">'
-                    +'  <input type="reset" value="Закрыть">'
-                    +'</div>';
-            
-            document.body.appendChild(form);
-            form_center(form);
-            form.onreset = function(){
-                document.body.removeChild(form);
-                form=null;
-                return false;
-            };
-            form.onsubmit = function(){
-                permission_update(this);
-                document.body.removeChild(form);
-                form=null;
-                return false;
-            }
-            
-        });
-        
-        request.open('POST',ADMIN_PATH);
-        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        request.send('command=permission&user_id='+user_id);
-        
-        
-    }
-    
-     //-----------------------------------------------
-     //            Списки пользователей
-     // 
-     //-----------------------------------------------
-    
-    
-     var user_list_element ;
-     
-     function userlistclick(event){
-        var target = event.target;
-        var table,row,id;
-        var action;
-        if (target.tagName==='A'){
-            if (target.hasAttribute('data-page')){
-                auth.userlist(user_list_element,'page='+target.getAttribute('data-page'));
-            } else  if (target.hasAttribute('data-action')){
-                action = target.getAttribute('data-action');
-                table =user_list_element.querySelector('table');
-                row = target.closest('tr');
-                id = row.getAttribute('data-id');
-                switch(action){
-                    case 'user':
-                        user_permission(id);
-                        break;
-                    default:
-                        alert(action+' - '+id);
-                }
-            }
-            return false;
-        }
-        if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
-            table = user_list_element.querySelector('table');
-            action = target.getAttribute('data-action');
-            row  = target.closest('tr');
-            id = row.getAttribute('data-id');
-            auth.delete_user(id,function(text){
-                var a = JSON.parse(text);
-                if (a['error']===0){
-                    table.deleteRow(row.rowIndex);
-                } else {
-                    alert(text);
-                }
-            });
-            return false;
-        }
-    };
-
-
-    
-    this.userlist=function(element,page){
-        if (typeof element === null){
-            element=document.querySelector('#userlist');
-        }
-        user_list_element = element;
-        user_list_element.onclick = userlistclick;
-        
-        var request = Request(function (text){
-                element.innerHTML = '<h1>Список пользователей</h1>'+text;
-        });
-        console.log('typeof page :'+ typeof page);
-        var params = 'command=userlist';
-        if (typeof page !== 'undefined'){
-            params += '&'+page;
-        }
-        
-        request.open('POST',ADMIN_PATH);
-        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        request.send(params);
-        
-    };
-    
-    /**
-     * Процедуры администратора
-     * ------------------------
-     * @param {type} user_id
-     * @param {type} callback
-     * @returns {undefined}
-     */
-    this.delete_user=function(user_id,callback){
-        var request = Request(function(text){
-            callback(text);            
-        });
-        request.open('POST',ADMIN_PATH);
-        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        request.send('command=delete&user_id='+user_id);
-    };
-
     
     /**
      * Восстановление пароля
@@ -642,5 +502,150 @@ function Auth(admin_element,user_id){
             self.confirm(register,hash);
         }
     }
+    
+     //-----------------------------------------------
+     //            Списки пользователей
+     // 
+     //-----------------------------------------------
+    
+    
+     var user_list_element ;
+     
+    /**
+     * Применить изменения в форме разрешения
+     * @param {type} form
+     * @returns {undefined}
+     */
+    function permission_update(form){
+        var data = new FormData(form)
+        var request = Request(function(text){
+            alert(text);
+        });
+        request.open('POST',ADMIN_PATH);
+        data.append('command','permission_update');
+        request.send(data);
+    }
+    
+    /**
+     * Открыть форму с разрешниями пользователя
+     * @param {type} user_id
+     * @returns {undefined}
+     */
+    this.user_permission= function(user_id){
+        
+        var request = Request(function(text){
+            
+            var form = document.createElement('form');
+            form.className='dialog-form';
+            form.innerHTML = 
+                     '<div class="dialog-form-title">Разрешения</div>'
+                    +'<div class="dialog-form-content">'+text+'</div>'
+                    +'<div class="dialog-form-footer">'
+                    +'  <input type="submit" value="Применить">'
+                    +'  <input type="reset" value="Закрыть">'
+                    +'</div>';
+            
+            document.body.appendChild(form);
+            form_center(form);
+            form.onreset = function(){
+                document.body.removeChild(form);
+                form=null;
+                return false;
+            };
+            form.onsubmit = function(){
+                permission_update(this);
+                document.body.removeChild(form);
+                form=null;
+                return false;
+            }
+            
+        });
+        
+        request.open('POST',ADMIN_PATH);
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=permission&user_id='+user_id);
+        
+        
+    }
+    
+     
+     function userlistclick(event){
+        var target = event.target;
+        var table,row,id;
+        var action;
+        if (target.tagName==='A'){
+            if (target.hasAttribute('data-page')){
+                auth.userlist(user_list_element,'page='+target.getAttribute('data-page'));
+            } else  if (target.hasAttribute('data-action')){
+                action = target.getAttribute('data-action');
+                table =user_list_element.querySelector('table');
+                row = target.closest('tr');
+                id = row.getAttribute('data-id');
+                switch(action){
+                    case 'user':
+                        self.user_permission(id);
+                        break;
+                    default:
+                        alert(action+' - '+id);
+                }
+            }
+            return false;
+        }
+        if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
+            table = user_list_element.querySelector('table');
+            action = target.getAttribute('data-action');
+            row  = target.closest('tr');
+            id = row.getAttribute('data-id');
+            auth.delete_user(id,function(text){
+                var a = JSON.parse(text);
+                if (a['error']===0){
+                    table.deleteRow(row.rowIndex);
+                } else {
+                    alert(text);
+                }
+            });
+            return false;
+        }
+    };
+
+
+    
+    this.userlist=function(element,page){
+        if (typeof element === null){
+            element=document.querySelector('#userlist');
+        }
+        user_list_element = element;
+        user_list_element.onclick = userlistclick;
+        
+        var request = Request(function (text){
+                element.innerHTML = '<h1>Список пользователей</h1>'+text;
+        });
+        console.log('typeof page :'+ typeof page);
+        var params = 'command=userlist';
+        if (typeof page !== 'undefined'){
+            params += '&'+page;
+        }
+        
+        request.open('POST',ADMIN_PATH);
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send(params);
+        
+    };
+    
+    /**
+     * Процедуры администратора
+     * ------------------------
+     * @param {type} user_id
+     * @param {type} callback
+     * @returns {undefined}
+     */
+    this.delete_user=function(user_id,callback){
+        var request = Request(function(text){
+            callback(text);            
+        });
+        request.open('POST',ADMIN_PATH);
+        request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        request.send('command=delete&user_id='+user_id);
+    };
     
 }

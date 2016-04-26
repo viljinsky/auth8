@@ -2,9 +2,11 @@
 
 session_start();
 
-include '../connect.php';
+include_once '../connect.php';
 
 include './consts.php';
+
+include './Permission.php';
 
 //-------------------------------------------------
 $command = filter_input(INPUT_POST,'command');
@@ -36,16 +38,21 @@ if (isset($command)){
             echo restore();
             break;
         
-        
+        # сообщение пользователя 
         case 'message':
             echo message();
             break;
+        # информация для пользователя
         case 'userinfo':
             echo read_userinfo();
             break;
+        
         case 'update_userinfo':
             echo update_userinfo();
             break;
+        
+        #информация для администраторв
+        
         case 'userlist':
             echo userlist();
             break;
@@ -61,132 +68,6 @@ if (isset($command)){
     }
 }
         
-//-------------------------------------------------
-
-class Permission{
-    function __construct() {
-        
-    }
-    
-    function get_role_list($selected){
-        $str = '';
-        $result= mysql_query("select role_id,role_name from user_role") or die(mysql_error());
-        while ($data=  mysql_fetch_array($result)){
-            list($role_id,$role_name)=$data;
-            if ($role_id===$selected){
-                $str .="<option value=$role_id selected>".$role_name."</option>";                
-            } else  {
-                $str .="<option value=$role_id >".$role_name."</option>";
-            }
-        }
-        return $str;
-    }
-    
-    
-    function update(){
-        $user_id = filter_input(INPUT_POST,'user_id');
-        $role_id = filter_input(INPUT_POST, 'role_id');
-        $confirmed = filter_input(INPUT_POST, 'confirmed');
-        if (!isset($confirmed)){
-            $confirmed='false';
-        }
-        
-        mysql_query("update users set email_confirmed=$confirmed,role_id=$role_id where user_id=$user_id") or die(mysql_error());
-            
-
-        echo 'Изменение свойст для user_id ='.$user_id.'<br>'."\n роль $role_id \n confirmed $confirmed";
-
-        $result = mysql_query("select permission_id,permission_name from permission") or die(mysql_error());
-        while ($data = mysql_fetch_array($result)){
-            list($id,$name)=$data;
-            $value = filter_input(INPUT_POST, $name);
-            if (!isset($value)) {
-                $value='false';
-            }
-            mysql_query("update users_permission set permission_value = $value where user_id=$user_id and permission_id=$id ") or die(mysql_error());
-            echo " $id $name = '$value' \n";
-        }
-    }
-    
-    function user_permission($user_id){
-        echo '<div>разрешения</div>';
-        $result = mysql_query("select a.permission_id,a.permission_value,b.permission_description,b.permission_name from users_permission a inner join permission b on a.permission_id=b.permission_id  where a.user_id=$user_id limit 20") or die(mysql_error());
-        echo '<table>';
-        while ($data = mysql_fetch_array($result)){
-            list($id,$value,$description,$name)=$data;
-            echo '<tr><td>'.$id.'</td><td>'.$description.'</td><td>'.$value.'</td><td><input name="'.$name.'" type="checkbox" '.($value?'checked':'').' value="true"   ></td></tr>';
-        }
-        echo '</table>';
-    }
-    
-    function user_visits($user_id){
-        echo '<div>Посещения</div>';
-        echo '<table>';
-        $result = mysql_query("select visit_time from visits where user_id=$user_id order by visit_time desc limit 10") or die(mysql_error());
-        if (mysql_num_rows($result)===0){
-                echo '<tr><td>-</td></tr>';            
-        } else {
-            while ($data = mysql_fetch_array($result)){
-                echo '<tr><td>'.$data['visit_time'].'</td></tr>';
-            }        
-        }
-        echo '</table>';
-        
-    }
-    
-    function user_download($user_id){
-        echo '<div>Загрузки</div>';
-        $result = mysql_query("select download_date from download where user_id=$user_id");
-        echo '<table>';
-        if (mysql_num_rows($result)===0){
-            echo '<tr><td>-</td></tr>';            
-        } else {
-            while ($data = mysql_fetch_array($result)){
-                echo '<tr><td>'.$data[0].'</td></tr>';
-            }
-        }
-        echo '</table>';
-    }
-    function edit(){
-        $user_id = filter_input(INPUT_POST, 'user_id');
-        $result = mysql_query("select concat(last_name,' ',first_name) ,reg_date,email,email_confirmed,role_id "
-                             ." from users where user_id=$user_id")
-                or die(mysql_error());
-        $data = mysql_fetch_array($result);
-        list($user_name,$reg_date,$email,$email_confirmed,$role_id) = $data;
-        echo '<table>'.        
-             '<tr><td>Ид</td><td><input name="user_id" value="'.$user_id.'"></td></tr>'.
-             "<tr><td colspan='2'>$user_name</td></tr>".
-             "<tr><td colspan='2'>$email <input name='confirmed' value='true' type='checkbox' ".($email_confirmed?'checked':'')."></td></tr>".   
-             "<tr><td>Дата регистрации</td><td>$reg_date</td></tr>".
-             "<tr><td>Статус</td><td><select name='role_id' id='role'>".$this->get_role_list($role_id)."</select></td></tr>".
-            '</table>';
-        
-        $this->user_permission($user_id);
-        $this->user_visits($user_id);
-        $this->user_download($user_id);
-        
-    }
-    
-}
-
-function permission(){
-    $p = new Permission();
-    $p->edit();
-}
-
-function permission_update(){
-    $p= new Permission();
-    $p->update();
-}
-
-function delete_user(){
-    $user_id = filter_input(INPUT_POST, 'user_id');
-    if (mysql_query('delete from users where user_id='.$user_id)){
-        return '{"error":'.ERROR_OK.'}';
-    }
-    return '{"error":'.ERROR_SQL.',"message":"'.mysql_error().'"}';
-}
 
 /**
  * Вход пользователя
@@ -209,7 +90,7 @@ function login(){
             list($user_id,$user_name,$role_id,$email,$email_confirmed) = $data;
 
             if (!$email_confirmed){
-                return '{"error":'.ERROR_NOT_CONFIRMED.',"message":"Электронный адрес не поддверждён","user_id":'.$user_id.',"email":"'.$email.'"}';
+                return '{"error":'.ERROR_NOT_CONFIRMED.',"message":"Электронный адрес, который Вы указали при регистрации - не поддверждён"}';
             }
             
             mysql_query("insert into visits (user_id) values ($user_id)");
@@ -253,8 +134,6 @@ function logout(){
  */
 
 function register(){
-    
-    
 
     $secret = $_SESSION['secret'];
 
@@ -292,16 +171,21 @@ function register(){
 
     if (mysql_affected_rows()==1){
 
-        $result = mysql_query("select user_id from users where login='$login'");
-        $data = mysql_fetch_array($result);
-        $user_id = $data['user_id'];
+        $user_id = mysql_insert_id();
 
-//        $link = ADMIN_PATH.'/confirm.php?user_id='.$user_id.'&pwd='.$pwd;
         $link = LOCATION.'/?register='.$user_id.'&hash='.$pwd;
         
         $subject = 'Составитель расписания.Регистрация ';
-        $message = 'Перейдите по ссылке'.
-                '<a href="'.$link.'">Завершить регистрацию</a>';
+        
+        $message = 
+            "<p>".
+            'Для завершения регистрации перейдите по ссылке : <a href="'.$link.'">Завершить регистрацию</a>'.
+            "</p>".
+            "<p>".
+            "Если Вы не регистрировались на сайте Составитель расписания (письмо пришло к Вам по ошибке),".
+            "просто проигнорируйте его".            
+            "</p>";
+        
 
 
         $from = 'timetabler@narod.ru';
@@ -312,7 +196,7 @@ function register(){
 
         mail($email, $subject, $message,$headers);
 
-        return '{"error":'.ERROR_OK.',"message":"На указанный Вами адрес было отправлено письмо поддтверждения регистрации"}';
+        return '{"error":'.ERROR_OK.',"message":"-"}';
     } else  {
         return '{"error":'.ERROR_UNKNOW.',"message":"Неизвестная ошибка"}';
     }
@@ -404,64 +288,6 @@ function message(){
     }
 
 }
-/**
- * Список пользователей
- * @return string
- */
-function userlist(){
-
-    $count=15;
-    $page = filter_input(INPUT_POST,'page');
-    if (!isset($page)){
-        $page=1;
-    }
-
-    $result = mysql_query("select count(*) from users") or die(mysql_error());
-    $data=  mysql_fetch_array($result);
-    $usercount = $data[0];
-    $page_count = intval(($data[0]-1)/$count)+1;
-
-
-    $start = ($page-1)*$count;
-
-//    $result = mysql_query("select user_id,concat(last_name,' ',first_name),login,email,email_confirmed,\n"
-//            ."date_format(reg_date,'%d %m %Y'),"
-//            ."date_format((select max(visit_time) from visits where user_id=users.user_id),'%d %m %Y'),\n"
-//            ."(select count(*) from visits where user_id=users.user_id)\n"
-//            ."from users limit $start,$count")
-//                    or die(mysql_error());
-    $result = mysql_query("select * from v_users limit $start,$count") or die(mysql_error());
-    $html = '';
-
-    $html .= '<table>';
-    $recno = 0;
-    while ($data = mysql_fetch_array($result)){
-        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
-        $recno++;
-        $html .='<tr data-id="'.$user_id.'">';
-        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
-            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
-             ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
-        $html .='</tr>';
-    }
-
-//    $path  =  '';//ADMIN_PATH.'/userlist.php';
-
-    $html.='</table>';
-
-    $first = $page>1?'<a href="#" data-page="1">1</a>...':'';
-    $prior = $page>2?'<a href="#" data-page="'.($page-1).'" >'.($page-1).'</a>':'&nbsp';
-    $next  = $page<$page_count-1?'<a href="#" data-page="'.($page+1).'">'.($page+1).'</a>':'&nbsp;';
-    $last  = $page<$page_count?'...<a href="#" data-page="'.$page_count.'">'.$page_count.'</a>':'';
-
-    $html.= '<div>всего пользователей <b>'.$usercount.'</b></div>';
-
-    $html.= $first.$prior.'&nbsp;'.$page.'&nbsp'.$next.$last;
-
-    return  '<div class="user-list-panel">'.$html.'</div>';
-    
-}
-
 /**
  * Пользователь подтвердил емейл
  * Статус пользователя меняетсяс 0 на 2
@@ -555,4 +381,72 @@ function restore(){
 }
 
 
+function permission(){
+    $p = new Permission(filter_input(INPUT_POST,'user_id'));
+    $p->edit();
+}
+
+function permission_update(){
+    $p= new Permission(filter_input(INPUT_POST,'user_id'));
+    $p->update();
+}
+
+function delete_user(){
+    $user_id = filter_input(INPUT_POST, 'user_id');
+    if (mysql_query('delete from users where user_id='.$user_id)){
+        return '{"error":'.ERROR_OK.'}';
+    }
+    return '{"error":'.ERROR_SQL.',"message":"'.mysql_error().'"}';
+}
+
+
+/**
+ * Список пользователей
+ * @return string
+ */
+function userlist(){
+
+    $count=15;
+    $page = filter_input(INPUT_POST,'page');
+    if (!isset($page)){
+        $page=1;
+    }
+
+    $result = mysql_query("select count(*) from users") or die(mysql_error());
+    $data=  mysql_fetch_array($result);
+    $usercount = $data[0];
+    $page_count = intval(($data[0]-1)/$count)+1;
+
+
+    $start = ($page-1)*$count;
+
+    $result = mysql_query("select * from v_users order by user_id limit $start,$count") or die(mysql_error());
+    $html = '';
+
+    $html .= '<table>';
+    $recno = 0;
+    while ($data = mysql_fetch_array($result)){
+        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
+        $recno++;
+        $html .='<tr data-id="'.$user_id.'">';
+        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
+            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
+             ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
+        $html .='</tr>';
+    }
+
+    $html.='</table>';
+
+    $first = $page>1?'<a href="#" data-page="1">1</a>...':'';
+    $prior = $page>2?'<a href="#" data-page="'.($page-1).'" >'.($page-1).'</a>':'&nbsp';
+    $next  = $page<$page_count-1?'<a href="#" data-page="'.($page+1).'">'.($page+1).'</a>':'&nbsp;';
+    $last  = $page<$page_count?'...<a href="#" data-page="'.$page_count.'">'.$page_count.'</a>':'';
+
+    $html.= '<div>всего пользователей <b>'.$usercount.'</b></div>';
+
+    $html.= $first.$prior.'&nbsp;'.$page.'&nbsp'.$next.$last;
+
+    return  '<div class="user-list-panel">'.$html.'</div>';
+    
+}
 

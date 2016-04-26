@@ -6,6 +6,8 @@ define('HOST', 'localhost');
 define('DATABASE','auth8');
 define('USER','auth8');
 define('PASSWORD','auth8');
+define('TOPSICRET','T0p3icret');
+
 
 /** Глобальны путь к сайту*/
 define('LOCATION','http://localhost/auth8');

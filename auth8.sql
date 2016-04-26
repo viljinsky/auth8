@@ -2,11 +2,11 @@ drop database if exists auth8;
 
 create database auth8;
 
-drop user  auth8;
+-- drop user  docsmd3;
 
-create user 'auth8'   identified by 'auth8';
+-- create user 'docsmd3'   identified by 'docsmd3';
 
-grant all on auth8.* to auth8;
+grant select, insert , delete, update  on auth8.* to auth8;
 
 use auth8;
 
@@ -29,6 +29,7 @@ CREATE TABLE users (
   role_id int(11) DEFAULT 0,
   allow_to_notify tinyint(1) DEFAULT 1,
   email_confirmed tinyint(1) DEFAULT 0,
+  banned boolean default false,
   PRIMARY KEY (user_id),
   UNIQUE KEY login (login),
   UNIQUE KEY email (email),
@@ -46,7 +47,7 @@ CREATE TABLE visits (
 insert into user_role (role_id,role_name) values(1,'Гость'),(2,'Пользователь'),(3,'Адимнистратор');
 --  pwd  admin.T0p3icret
 insert into users (last_name,first_name,login,pwd,email,email_confirmed,role_id)
- values ('Фамилия','Имя','admin','6deb870833999b29935d28349cb54243','admin@mysite.com',true,3);
+ values ('Администратор','','admin','6deb870833999b29935d28349cb54243','admin@mysite.com',true,3);
  
  
  ------------------------
@@ -58,7 +59,7 @@ insert into users (last_name,first_name,login,pwd,email,email_confirmed,role_id)
     default_value boolean);
     
 insert into permission values
- (1,'add_message',	'Добавлять сообщения',  true),
+ (1,'add_message',	    'Добавлять сообщения',  true),
  (2,'add_replay',       'Отвечать на сообщения',true),
  (3,'add_attachment',   'Прикреплять файлы',    false) ,
  (4,'download',         'Скачивать файлы',      false),
@@ -88,15 +89,9 @@ select * from permission;
 select * from users_permission;
 
 
-create table download (
-	download_id integer not null primary key auto_increment,
-	user_id integer not null,
-	download_date timestamp default current_timestamp,
-	constraint fk_download_users foreign key (user_id) references users(user_id) on delete cascade
- );
 
 create view v_users as
-select user_id,concat(last_name,' ',first_name) as user_name,login,user_role.role_name, email,email_confirmed,
+select user_id,concat(last_name,' ',first_name) as user_name,login,user_role.role_name, email,email_confirmed,banned,
   date_format(reg_date,'%d %m %Y') as reg_date,
   date_format((select max(visit_time) from visits where user_id=users.user_id),'%d %m %Y') as last_visit,
   (select count(*) from visits where user_id=users.user_id) as visit_count

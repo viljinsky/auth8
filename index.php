@@ -17,7 +17,7 @@
             .content {max-width: 800px;  margin: 0 auto; background: #fff; }
             
             td {white-space: nowrap;}
-            tr:nth-child(odd) {background: #f0f0f0;}
+            /*tr:nth-child(odd) {background: #f0f0f0;}*/
         </style>
     </head>
     
