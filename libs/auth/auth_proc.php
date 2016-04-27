@@ -9,6 +9,9 @@ include './consts.php';
 include './Permission.php';
 
 //-------------------------------------------------
+
+$permission = new Permission(filter_input(INPUT_POST,'user_id'));
+
 $command = filter_input(INPUT_POST,'command');
 if (isset($command)){
     switch ($command){
@@ -57,16 +60,17 @@ if (isset($command)){
             break;
         
         case 'userlist':
-            echo userlist();
+            $permission->userlist();
             break;
         case 'permission':
-            permission();
+            $permission->edit();
             break;
         case 'permission_update':
-            permission_update();
+            $permission->update();
             break;
         case 'delete':
-            echo delete_user();
+            $permission->delete();
+//            echo delete_user();
             break;
         default :
             echo 'unknow commad "'.$command.'"';
@@ -413,25 +417,6 @@ function restore(){
 }
 
 
-function permission(){
-    $p = new Permission(filter_input(INPUT_POST,'user_id'));
-    $p->edit();
-}
-
-function permission_update(){
-    $p= new Permission(filter_input(INPUT_POST,'user_id'));
-    $p->update();
-}
-
-function delete_user(){
-    $user_id = filter_input(INPUT_POST, 'user_id');
-    if (mysql_query('delete from users where user_id='.$user_id)){
-        return '{"error":'.ERROR_OK.'}';
-    }
-    return '{"error":'.ERROR_SQL.',"message":"'.mysql_error().'"}';
-}
-
-
 function locate(){
     $locate = urldecode(filter_input(INPUT_POST,'userlocate'));
     echo $locate;
@@ -456,54 +441,3 @@ function locate(){
     $html.='</table>';
     echo $html;
 }
-
-/**
- * Список пользователей
- * @return string
- */
-function userlist(){
-
-    $count=15;
-    $page = filter_input(INPUT_POST,'page');
-    if (!isset($page)){
-        $page=1;
-    }
-
-    $result = mysql_query("select count(*) from users") or die(mysql_error());
-    $data=  mysql_fetch_array($result);
-    $usercount = $data[0];
-    $page_count = intval(($data[0]-1)/$count)+1;
-
-
-    $start = ($page-1)*$count;
-
-    $result = mysql_query("select * from v_users order by user_id limit $start,$count") or die(mysql_error());
-    $html = '';
-
-    $html .= '<table>';
-    $recno = 0;
-    while ($data = mysql_fetch_array($result)){
-        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
-        $recno++;
-        $html .='<tr data-id="'.$user_id.'">';
-        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
-            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
-             ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
-        $html .='</tr>';
-    }
-
-    $html.='</table>';
-
-    $first = $page>1?'<a href="#" data-page="1">Страница 1</a>...':'&nbsp;';
-    $prior = $page>2?'<a href="#" data-page="'.($page-1).'" >Страница '.($page-1).'</a>':'&nbsp';
-    $next  = $page<$page_count-1?'<a href="#" data-page="'.($page+1).'">Страница '.($page+1).'</a>':'&nbsp;';
-    $last  = $page<$page_count?'...<a href="#" data-page="'.$page_count.'">Страница '.$page_count.'</a>':'&nbsp';
-
-    $html.= '<div>всего пользователей <b>'.$usercount.'</b></div>';
-
-    $html.= $first.$prior.'&nbsp;Страница '.$page.'&nbsp'.$next.$last;
-
-    return  '<div class="user-list-panel">'.$html.'</div>';
-    
-}
-

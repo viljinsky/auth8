@@ -570,18 +570,20 @@ function Auth(admin_element,user_id){
             return false;
         }
         if (target.tagName==='BUTTON' && target.hasAttribute('data-action')){
-            table = user_list_element.querySelector('table');
-            action = target.getAttribute('data-action');
-            row  = target.closest('tr');
-            id = row.getAttribute('data-id');
-            auth.delete_user(id,function(text){
-                var a = JSON.parse(text);
-                if (a['error']===0){
-                    table.deleteRow(row.rowIndex);
-                } else {
-                    alert(text);
-                }
-            });
+            if (confirm('Удалить пользователя')){
+                table = user_list_element.querySelector('table');
+                action = target.getAttribute('data-action');
+                row  = target.closest('tr');
+                id = row.getAttribute('data-id');
+                auth.delete_user(id,function(text){
+                    if (text.length===0){
+                        table.deleteRow(row.rowIndex);
+                    } else {
+                        var a = JSON.parse(text);
+                        alert(a['message']);
+                    }
+                });
+            }
             return false;
         }
     };
