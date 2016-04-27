@@ -497,7 +497,7 @@ function Auth(admin_element,user_id){
     function permission_update(form){
         var data = new FormData(form)
         var request = Request(function(text){
-            alert(text);
+            self.row.innerHTML = text;
         });
         request.open('POST',ADMIN_PATH);
         data.append('command','permission_update');
@@ -519,8 +519,8 @@ function Auth(admin_element,user_id){
                      '<div class="dialog-form-title">Разрешения</div>'
                     +'<div class="dialog-form-content">'+text+'</div>'
                     +'<div class="dialog-form-footer">'
-                    +'  <input type="submit" value="Применить">'
-                    +'  <input type="reset" value="Закрыть">'
+                    +'<input type="submit" value="Применить">'
+                    +'<input type="reset" value="Закрыть">'
                     +'</div>';
             
             document.body.appendChild(form);
@@ -557,8 +557,8 @@ function Auth(admin_element,user_id){
             } else  if (target.hasAttribute('data-action')){
                 action = target.getAttribute('data-action');
                 table =user_list_element.querySelector('table');
-                row = target.closest('tr');
-                id = row.getAttribute('data-id');
+                self.row = target.closest('tr');
+                id = self.row.getAttribute('data-id');
                 switch(action){
                     case 'user':
                         self.user_permission(id);

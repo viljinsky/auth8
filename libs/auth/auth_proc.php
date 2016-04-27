@@ -56,9 +56,8 @@ if (isset($command)){
         
         #информация для администраторв
         case 'locate':
-            locate();
+            $permission->locate();
             break;
-        
         case 'userlist':
             $permission->userlist();
             break;
@@ -70,7 +69,6 @@ if (isset($command)){
             break;
         case 'delete':
             $permission->delete();
-//            echo delete_user();
             break;
         default :
             echo 'unknow commad "'.$command.'"';
@@ -416,28 +414,3 @@ function restore(){
     list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id'])=$data;
 }
 
-
-function locate(){
-    $locate = urldecode(filter_input(INPUT_POST,'userlocate'));
-    echo $locate;
-//    mysql_query("SET NAMES 'UTF8'") or die(mysql_error());
-    $result = mysql_query("select * from v_users where login like '%$locate%' or user_name like '%$locate%' or email like '%$locate%'") or die(mysql_error());
-    if (mysql_num_rows($result)===0){
-        echo 'Ничего не найдено';
-        return;
-    }
-    $html = '<table>';
-    $recno = 0;
-    while ($data = mysql_fetch_array($result)){
-        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
-        $recno++;
-        $html .='<tr data-id="'.$user_id.'">';
-        $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
-            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
-             ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
-        $html .='</tr>';
-    }
-
-    $html.='</table>';
-    echo $html;
-}

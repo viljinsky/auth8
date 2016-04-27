@@ -80,11 +80,8 @@ class Permission{
         $result = mysql_query("select * from v_users where user_id=$this->user_id") or die(mysql_error());
         
         $data = mysql_fetch_array($result);
-        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
+        echo $this->tablerow(0,$data,false);
         
-        echo  "<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
-            . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
-            ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
     }
     
     function user_permission(){
@@ -138,6 +135,40 @@ class Permission{
         echo '{"error":'.ERROR_SQL.',"message":"'.mysql_error().'"}';
     }
     
+    private function tablerow($recno,$data,$tr){
+        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
+        return  ($tr?'<tr data-id="'.$user_id.'">':'').
+                '<td>'.$recno.'</td>
+                <td><input type="checkbox"></td><td>'.$role_name.'</td>
+                <td><a href="#" data-action="user">'.$user_name.'</a></td>
+                <td>'.$login.'</td>
+                <td>'.$email.'</td><td>'.$reg_date.'</td>
+                <td>'.$last_visit.'</td>
+                <td>'.$visit_count.'</td>
+                <td><button data-action="delete">Удалить</buttom></td>
+                <td><input type="checkbox" '.($confirmed?'checked':'').' disabled></td>'
+                .($tr?'</tr>':'');
+    }
+    
+    function locate(){
+        $locate = urldecode(filter_input(INPUT_POST,'userlocate'));
+        $result = mysql_query("select * from v_users where login like '%$locate%' or user_name like '%$locate%' or email like '%$locate%'") or die(mysql_error());
+        if (mysql_num_rows($result)===0){
+            echo 'Ничего не найдено';
+            return;
+        }
+        $html = '<table>';
+        $recno = 0;
+        while ($data = mysql_fetch_array($result)){
+            $recno++;
+            $html .= $this->tablerow($recno,$data,true);
+        }
+
+        $html.='</table>';
+        echo $html;
+        
+    }
+    
     function userlist(){
         $count=15;
         $page = filter_input(INPUT_POST,'page');
@@ -157,17 +188,11 @@ class Permission{
         $html = '';
 
         $html .= '<table>';
-        $recno = 0;
+        $recno = ($page-1)*$count;
         while ($data = mysql_fetch_array($result)){
-            list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
             $recno++;
-            $html .='<tr data-id="'.$user_id.'">';
-            $html .="<td><input type='checkbox'></td><td>$role_name</td><td><a href='#' data-action='user'>$user_name</a></td><td>$login</td>"
-                . "<td>$email</td><td>$reg_date</td><td>$last_visit</td><td>$visit_count</td>"
-                 ."<td><button data-action='delete'>Удалить</buttom></td><td><input type='checkbox' ".($confirmed?'checked':'')." disabled></td>";
-            $html .='</tr>';
+            $html .=$this->tablerow($recno,$data,true);
         }
-
         $html.='</table>';
 
         $first = $page>1?'<a href="#" data-page="1">Страница 1</a>...':'&nbsp;';

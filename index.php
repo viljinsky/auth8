@@ -40,7 +40,13 @@
                 <a href="#" id="users" >Список пользователей</a>
                 <?php } ?>
 
-                <div ><form id="finduser"><input name="userlocate" placeholder="Найти пользователя..."><input type="submit" value="Найти"></form></div>
+                <div >
+                    <form id="finduser">
+                        <input name="userlocate" placeholder="Найти пользователя...">
+                        <input type="submit" value="Найти">
+                    </form>
+                </div>
+                
                 <div id="userlist"></div>
 
             </div>
