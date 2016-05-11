@@ -4,23 +4,30 @@
     
     include './libs/connect.php';
     
+    include './libs/auth/Permission.php';
+    
     
     if (!isset($_SESSION['user_id'])){
         
-        $_SESSION['user_id']=null;
-        $_SESSION['user_name']=null;
-        $_SESSION['role_id']=null;
+        $_SESSION['user_id']    = null;
+        $_SESSION['user_name']  = null;
+        $_SESSION['role_id']    = null;
         
         $login = filter_input(INPUT_COOKIE,'login');
         $pwd = filter_input(INPUT_COOKIE,'pwd');
         if (isset($login) && isset($pwd)){
-
-            $sql    = "select user_id,concat(last_name,' ' ,first_name),role_id \n"
-                  ." from users  where (login='$login' or email='$login') and pwd='$pwd'";
-            $result = mysql_query($sql) or die(mysql_error());
+            $result = mysql_query(
+                    "select user_id,concat(last_name,' ' ,first_name),role_id 
+                     from users  
+                     where (login='$login' or email='$login') and pwd='$pwd'")
+                    or die(mysql_error());
             if ($result && mysql_num_rows($result)===1){
                 $data = mysql_fetch_array($result);
                 list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id']) = $data;
+                
+                $permission = new Permission($_SESSION['user_id']);
+                $_SESSION['permission']=$permission->a;
+                
                 mysql_query('insert into visits (user_id) values('.$_SESSION['user_id'].')') or die(mysql_error());
             } 
         } 

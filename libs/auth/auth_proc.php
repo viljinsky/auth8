@@ -10,7 +10,7 @@ include './Permission.php';
 
 //-------------------------------------------------
 
-$permission = new Permission(filter_input(INPUT_POST,'user_id'));
+ $permission = new Permission(filter_input(INPUT_POST,'user_id'));
 
 $command = filter_input(INPUT_POST,'command');
 if (isset($command)){
@@ -101,11 +101,14 @@ function login(){
             }
             
             mysql_query("insert into visits (user_id) values ($user_id)");
-
+            
             $_SESSION['user_id']    = $user_id;
             $_SESSION['user_name']  = $user_name;
             $_SESSION['role_id']    = $role_id;
 
+            $permission = new Permission($_SESSION['user_id']);
+            $_SESSION['permission']=$permission->a;
+            
             if ($remember_me){
                     setcookie('login', $login,time()+3600*24*31,'/');
                     setcookie('pwd',$pwd,time()+3600*24*31,'/');
@@ -172,7 +175,7 @@ function register(){
     $pwd = md5($password1.TOPSICRET);
 
     $sql = "insert into users (last_name,first_name,email,login,pwd,role_id) "
-          ."values ('$last_name','$first_name','$email','$login','$pwd',".ROLE_GUEST.")";
+          ."values ('$last_name','$first_name','$email','$login','$pwd',".Permission::ROLE_GUEST.")";
     if (!mysql_query($sql)){
         return '{"error":'.ERROR_SQL.',"message":"'.mysql_error().'","sql":"'.$sql.'"}';
     }
@@ -319,8 +322,12 @@ function confirm(){
     if (mysql_num_rows($result)===1){
         $data = mysql_fetch_array($result);
 
-        mysql_query("update users set email_confirmed=true,role_id = ".ROLE_USER." where user_id=$user_id") or die(mysql_error());
+        mysql_query("update users set email_confirmed=true,role_id = ".Permission::ROLE_USER." where user_id=$user_id") or die(mysql_error());
         list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id'])=$data;
+        
+        $permission = new Permission($_SESSION['user_id']);
+        $_SESSION['permission']=$permission->a;
+        
         return '{"error":'.ERROR_OK.',"message":"Вы успешно зарегистрировались"}';
     }
     return '{"error":'.ERROR_UNKNOW.',"message":"Ошибка при подтверждении адреса  '.  mysql_error().'"}';
@@ -411,6 +418,9 @@ function restore(){
     $data = mysql_fetch_array($result);
     $newpwd = md5($password1.TOPSICRET);
     mysql_query("update users set pwd='$newpwd',email_confirmed=true where user_id=".$data['user_id']) or die(mysql_error());
+    
     list($_SESSION['user_id'],$_SESSION['user_name'],$_SESSION['role_id'])=$data;
+    $permission = new Permission($data['user_id']);
+    $_SESSION['permission']=$permission->a;
 }
 

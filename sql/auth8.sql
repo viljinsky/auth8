@@ -1,14 +1,11 @@
-drop database if exists auth8;
-
-create database auth8;
 
 -- drop user  docsmd3;
 
--- create user 'docsmd3'   identified by 'docsmd3';
+-- create user 'auth9'   identified by 'auth9';
 
-grant select, insert , delete, update  on auth8.* to auth8;
+-- grant select, insert , delete, update  on auth9.* to auth9;
 
-use auth8;
+-- use auth9;
 
 CREATE TABLE  user_role (
   role_id int(11) NOT NULL,
@@ -59,11 +56,11 @@ insert into users (last_name,first_name,login,pwd,email,email_confirmed,role_id)
     default_value boolean);
     
 insert into permission values
- (1,'add_message',	    'Добавлять сообщения',  true),
+ (1,'add_message',	'Добавлять сообщения',  true),
  (2,'add_replay',       'Отвечать на сообщения',true),
- (3,'add_attachment',   'Прикреплять файлы',    false) ,
- (4,'download',         'Скачивать файлы',      false),
- (5,'upload',           'Загружать файлы',      false) ;
+ (3,'add_attachment',   'Прикреплять файлы',    true) ,
+ (4,'download',         'Скачивать файлы',      true),
+ (5,'upload',           'Загружать файлы',      true) ;
  
  
 
@@ -89,12 +86,33 @@ select * from permission;
 select * from users_permission;
 
 
+create table user_payment(
+    operation_id varchar(18),
+	user_id integer not null,
+    payment_date timestamp default current_timestamp(),
+    amount decimal(10,2),
+    withdraw_amount decimal(10,2),
+    constraint fk_user_peyment_users foreign key (user_id) references users(user_id) 
+);
+
+
+create view v_permission as
+select user_id,role_id,banned,
+sum(case permission_id when 1 then permission_value else 0 end) as append,  -- добавлять сообщения
+sum(case permission_id when 2 then permission_value else 0 end) as replay,  -- отвечать
+sum(case permission_id when 3 then permission_value else 0 end) as attach,  -- прикреплять файлы
+sum(case permission_id when 4 then permission_value else 0 end) as download,  -- скачивать
+sum(case permission_id when 5 then permission_value else 0 end) as upload   -- загружать 
+from users_permission inner join users using(user_id) 
+group by user_id,role_id,banned;
+
 
 create view v_users as
-select user_id,concat(last_name,' ',first_name) as user_name,login,user_role.role_name, email,email_confirmed,banned,
+select user_id,concat(last_name,' ',first_name) as user_name,login,user_role.role_name, email,email_confirmed,users.banned,users.role_id,
   date_format(reg_date,'%d %m %Y') as reg_date,
   date_format((select max(visit_time) from visits where user_id=users.user_id),'%d %m %Y') as last_visit,
-  (select count(*) from visits where user_id=users.user_id) as visit_count
-  from users inner join user_role on users.role_id=user_role.role_id;
-  
-  select * from v_users;
+  (select count(*) from visits where user_id=users.user_id) as visit_count,
+  append,replay,attach,download,upload
+  from users inner join user_role using(role_id)
+  inner join v_permission using(user_id);
+

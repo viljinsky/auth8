@@ -4,17 +4,37 @@
 
 class Permission{
     
+    // роль пользователя
+    /** Гость*/
+    const ROLE_GUEST = 1;
+    /** Зарегистрированный пользователь */
+    const ROLE_USER  = 2;
+    /** Администратор */
+    const ROLE_ADMIN = 3;
+    
+    
+    const ADD_MESSAGE =  1;
+    /** отвечать на сообщения*/
+    const REPLAY_MESSAGE=  2;
+    /** добавлять файлы к сообщению*/
+    const ADD_ATTACHMENT = 3; 
+    /**загружать файлы на сервер */
+    const  UPLOAD_FILE=5;
+    /**скачивать файлы с сервера*/
+    const DOWNLOAD_FILE= 4;
+    
+    
     public $user_id = 0;
     public $role_id = 0;
     public $banned  = false;
     
-    public $a = array();
+    public $a = array(false,false,false,false,false);
     
-    function __construct($user_id) {
+    function __construct($user_id=null) {
         
-        $this->a = array();
         
         if (isset($user_id)){
+            $this->a = array();
             $this->user_id=  intval($user_id);
 
             $result = mysql_query("select role_id,banned from users where user_id=$user_id");
@@ -32,7 +52,7 @@ class Permission{
             $result = mysql_query("select permission_id,permission_value,role_id from users_permission a inner join users u on a.user_id=u.user_id  where u.user_id=$user_id") or die(mysql_error());
             while ($data = mysql_fetch_array($result)){
                 list($permission_id,$permission_value,$role_id)=$data;
-                $this->a[$permission_id]=($permission_value && !$this->banned ) || ($this->role_id === ROLE_ADMIN)  ;
+                $this->a[$permission_id]=($permission_value && !$this->banned ) || ($this->role_id === self::ROLE_ADMIN)  ;
             }
         }
         
@@ -86,11 +106,25 @@ class Permission{
     
     function user_permission(){
         echo '<div>разрешения</div>';
-        $result = mysql_query("select a.permission_id,a.permission_value,b.permission_description,b.permission_name from users_permission a inner join permission b on a.permission_id=b.permission_id  where a.user_id=$this->user_id limit 20") or die(mysql_error());
+        $result = mysql_query(
+                "select a.permission_id,
+                a.permission_value,
+                b.permission_description,
+                b.permission_name 
+                from users_permission a 
+                inner join permission b on a.permission_id=b.permission_id  
+                where a.user_id=$this->user_id") or die(mysql_error());
         echo '<table>';
         while ($data = mysql_fetch_array($result)){
             list($id,$value,$description,$name)=$data;
-            echo '<tr><td>'.$id.'</td><td>'.$description.'</td><td>'.$value.'</td><td><input name="'.$name.'" type="checkbox" '.($value?'checked':'').' value="true"   ></td></tr>';
+            echo '<tr>'
+                .'<td>'.$id.'</td><td>'.$description.'</td>'
+                .'<td>'.$value.'</td>'
+                .'<td>'
+                     .'<input name="'.$name.'" type="checkbox" '.($value?'checked':'')
+                     .' value="true"   >'
+                .'</td>'
+                .'</tr>';
         }
         echo '</table>';
     }
@@ -98,7 +132,12 @@ class Permission{
     function user_visits(){
         echo '<div>Посещения</div>';
         echo '<table>';
-        $result = mysql_query("select visit_time from visits where user_id=$this->user_id order by visit_time desc limit 10") or die(mysql_error());
+        
+        $result = mysql_query(
+            "select visit_time
+             from visits where user_id=$this->user_id 
+             order by visit_time desc limit 10")  or die(mysql_error());
+        
         if (mysql_num_rows($result)===0){
                 echo '<tr><td>-</td></tr>';            
         } else {
@@ -136,18 +175,21 @@ class Permission{
     }
     
     private function tablerow($recno,$data,$tr){
-        list($user_id,$user_name,$login,$role_name,$email,$confirmed,$reg_date,$last_visit,$visit_count)=$data;
-        return  ($tr?'<tr data-id="'.$user_id.'">':'').
-                '<td>'.$recno.'</td>
-                <td><input type="checkbox"></td><td>'.$role_name.'</td>
-                <td><a href="#" data-action="user">'.$user_name.'</a></td>
-                <td>'.$login.'</td>
-                <td>'.$email.'</td><td>'.$reg_date.'</td>
-                <td>'.$last_visit.'</td>
-                <td>'.$visit_count.'</td>
-                <td><button data-action="delete">Удалить</buttom></td>
-                <td><input type="checkbox" '.($confirmed?'checked':'').' disabled></td>'
-                .($tr?'</tr>':'');
+        return  ($tr?'<tr data-id="'.$data['user_id'].'">':'')
+                    .'<td><a href="#" data-action="user">'.$data['user_name'].'</a></td>'
+                    .'<td>'.$data['login'].'</td>'
+                    .'<td>'.$data['email'].'</td>'
+                    .'<td><input type="checkbox" '.($data['email_confirmed']?'checked':'').' disabled></td>'
+                    .'<td>'.$data['reg_date'].'</td>'
+                    .'<td>'.$data['last_visit'].'</td>'
+                    .'<td>'.$data['visit_count'].'</td>'
+
+                    .'<td><input type="checkbox" '.($data['append']?'checked':'').' disabled title="append"></td>'
+                    .'<td><input type="checkbox" '.($data['replay']?'checked':'').' disabled></td>'
+                    .'<td><input type="checkbox" '.($data['attach']?'checked':'').' disabled></td>'
+                    .'<td><input type="checkbox" '.($data['download']?'checked':'').' disabled></td>'
+                    .'<td><input type="checkbox" '.($data['upload']?'checked':'').' disabled></td>'
+                    .($tr?'</tr>':'');
     }
     
     function locate(){
@@ -184,14 +226,34 @@ class Permission{
 
         $start = ($page-1)*$count;
 
-        $result = mysql_query("select * from v_users order by user_id limit $start,$count") or die(mysql_error());
+        $result = mysql_query(
+            "select user_id,user_name,login,email,email_confirmed,reg_date,last_visit,visit_count,role_name,
+                append,replay,attach,download,upload
+             from v_users 
+             order by user_id limit $start,$count") 
+            or die(mysql_error());
         $html = '';
 
         $html .= '<table>';
         $recno = ($page-1)*$count;
         while ($data = mysql_fetch_array($result)){
             $recno++;
-            $html .=$this->tablerow($recno,$data,true);
+            $html.=$this->tablerow($recno,$data,true);
+//            $html .='<tr data-id="'.$data['user_id'].'">'
+//                    .'<td><a href="#" data-action="user">'.$data['user_name'].'</a></td>'
+//                    .'<td>'.$data['login'].'</td>'
+//                    .'<td>'.$data['email'].'</td>'
+//                    .'<td>'.$data['email_confirmed'].'</td>'
+//                    .'<td>'.$data['reg_date'].'</td>'
+//                    .'<td>'.$data['last_visit'].'</td>'
+//                    .'<td>'.$data['visit_count'].'</td>'
+//                    
+//                    .'<td><input type="checkbox" '.($data['append']?'checked':'').' disabled title="append"></td>'
+//                    .'<td><input type="checkbox" '.($data['replay']?'checked':'').' disabled></td>'
+//                    .'<td><input type="checkbox" '.($data['attach']?'checked':'').' disabled></td>'
+//                    .'<td><input type="checkbox" '.($data['download']?'checked':'').' disabled></td>'
+//                    .'<td><input type="checkbox" '.($data['upload']?'checked':'').' disabled></td>'
+//                    .'</tr>'     ;  //$this->tablerow($recno,$data,true);
         }
         $html.='</table>';
 
